@@ -1,12 +1,12 @@
 // src/config.js
 
 // 🚨 CRÍTICO: CHAVES DO SUPABASE 🚨
-// Use as chaves reais obtidas no painel do seu projeto Supabase.
-// A chave ANON_KEY é pública e segura, desde que o RLS (Row-Level Security) esteja configurado.
-export const SUPABASE_URL = "https://SEU_PROJETO_ID.supabase.co"; // Substitua
-export const SUPABASE_KEY = "SEU_PUBLIC_ANON_KEY"; // Substitua
+// Substitua SEU_PROJETO_ID e SEU_PUBLIC_ANON_KEY pelos valores reais
+export const SUPABASE_URL = "https://jwwgsyibgwpvgfbsltzr.supabase.co";
+export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3d2dzeWliZ3dwdmdmYnNsdHpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNzkzMDAsImV4cCI6MjA3ODk1NTMwMH0.9iA_dKu4UJf-tQV03YdG8J1N4FhuP_flxHr7HWDbt9I";
 
 // Credenciais do Pai (Simulação)
+// Mantenha estas se quiser usar o login de simulação do pai
 export const PARENT_CREDENTIALS = { email: 'admin@admin.com', password: 'admin' };
 
 // Constante de duração da recarga do jogo (6 horas)
