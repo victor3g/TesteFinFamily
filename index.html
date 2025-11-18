@@ -110,6 +110,7 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
             background-color: #e0f7fa; /* Fundo do céu leve */
             border-radius: 12px;
+            cursor: pointer; /* Adicionado cursor de ponteiro para indicar interação */
         }
 
         /* Animação de Flutuação */
@@ -1511,6 +1512,10 @@
         const ctx = canvas?.getContext('2d');
         const GAME_WIDTH = 300;
         const GAME_HEIGHT = 400;
+        
+        // NOVO: Variáveis de estado do mouse/touch para controle horizontal (Estilo Pou)
+        let isDragging = false;
+        let touchX = GAME_WIDTH / 2; // Posição X desejada para o centro do Piggy
 
         let game = {
             piggy: { x: GAME_WIDTH / 2 - 15, y: GAME_HEIGHT - 80, w: 30, h: 30, vy: 0, gravity: 0.25, jumpPower: -10, onCloud: false },
@@ -1561,10 +1566,71 @@
             ctx.fillText('💎', x - 15, y + 25);
         }
 
+        // NOVO: Funções de manipulação de entrada de mouse/toque para controle horizontal
+        function handleMouseDown(e) {
+            isDragging = true;
+            touchX = e.offsetX;
+        }
+
+        function handleMouseMove(e) {
+            if (isDragging) {
+                touchX = e.offsetX;
+            }
+        }
+
+        function handleMouseUp() {
+            isDragging = false;
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault(); 
+            isDragging = true;
+            const rect = canvas.getBoundingClientRect();
+            // Usa o primeiro toque
+            touchX = e.touches[0].clientX - rect.left; 
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault(); 
+            if (isDragging) {
+                const rect = canvas.getBoundingClientRect();
+                touchX = e.touches[0].clientX - rect.left;
+            }
+        }
+
+        function handleTouchEnd() {
+            isDragging = false;
+        }
+
+        // NOVO: Função para mover o personagem em direção ao toque (estilo Pou/Doodle Jump)
+        function updatePiggyMovement() {
+            const targetX = touchX;
+            const centerOffset = game.piggy.w / 2;
+            const currentCenterX = game.piggy.x + centerOffset; 
+            const diffX = targetX - currentCenterX;
+            
+            // Velocidade de movimento horizontal controlada
+            const moveSpeed = 5; 
+
+            if (Math.abs(diffX) > moveSpeed) {
+                game.piggy.x += (diffX > 0 ? moveSpeed : -moveSpeed);
+            } else {
+                game.piggy.x += diffX; // Chega ao ponto exato se estiver perto
+            }
+            
+            // Lidar com o wraparound horizontal
+            if (game.piggy.x > GAME_WIDTH) game.piggy.x = -game.piggy.w;
+            if (game.piggy.x < -game.piggy.w) game.piggy.x = GAME_WIDTH - game.piggy.w;
+        }
+
+
         function updateGame(deltaTime) {
             game.piggy.vy += game.piggy.gravity;
             game.piggy.y += game.piggy.vy;
             
+            // NOVO: Atualiza a posição horizontal com base no toque
+            updatePiggyMovement();
+
             if (game.piggy.y < GAME_HEIGHT / 2 && game.piggy.vy < 0) {
                 const scrollSpeed = -game.piggy.vy;
                 game.piggy.y = GAME_HEIGHT / 2;
@@ -1576,15 +1642,17 @@
 
             game.piggy.onCloud = false;
             game.clouds.forEach(cloud => {
-                if (game.piggy.vy > 0 && 
+                // Lógica de Colisão de Pulo Automático (estilo Pou)
+                if (game.piggy.vy > 0 && // Só checa colisão se estiver caindo
                     game.piggy.x + game.piggy.w > cloud.x && 
                     game.piggy.x < cloud.x + 50 &&
                     game.piggy.y + game.piggy.h > cloud.y && 
                     game.piggy.y + game.piggy.h < cloud.y + 20) {
                         
-                    game.piggy.vy = 0;
-                    game.piggy.y = cloud.y - game.piggy.h;
-                    game.piggy.onCloud = true;
+                    // Pulo forçado: redefine a velocidade vertical para subir
+                    game.piggy.vy = game.piggy.jumpPower; 
+                    game.piggy.y = cloud.y - game.piggy.h; // Posiciona em cima da nuvem
+                    game.piggy.onCloud = true; // Necessário para a lógica de spawn de nuvens
                 }
             });
 
@@ -1656,8 +1724,8 @@
             if (game.piggy.y > GAME_HEIGHT) {
                 gameOver();
             }
-            if (game.piggy.x > GAME_WIDTH) game.piggy.x = -game.piggy.w;
-            if (game.piggy.x < -game.piggy.w) game.piggy.x = GAME_WIDTH;
+            
+            // Removida lógica de wraparound daqui, agora está em updatePiggyMovement
         }
         
         function gameLoop(timestamp) {
@@ -1698,18 +1766,37 @@
                 score: 0, isRunning: true, lastTime: performance.now(),
             };
             document.getElementById('game-score').textContent = game.score;
-            document.getElementById('game-message').textContent = `Pule nas nuvens e colete ⭐ com o seu ${userData.currentPet?.label || 'Porquinho'}!`;
+            document.getElementById('game-message').textContent = `Mova o dedo na tela e pule nas nuvens, ${userData.currentPet?.label || 'Porquinho'}!`;
             
             requestAnimationFrame(gameLoop);
-            document.addEventListener('keydown', handleInput);
-            canvas?.addEventListener('click', handleInput);
+            
+            // REMOVIDO: document.addEventListener('keydown', handleInput);
+            // REMOVIDO: canvas?.addEventListener('click', handleInput);
+            
+            // NOVO: Adiciona listeners de mouse e toque
+            canvas?.addEventListener('mousemove', handleMouseMove);
+            canvas?.addEventListener('mousedown', handleMouseDown);
+            canvas?.addEventListener('mouseup', handleMouseUp);
+            // Usamos { passive: true } para touchmove, mas não para o touchstart/touchend se e.preventDefault() for chamado
+            canvas?.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas?.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas?.addEventListener('touchend', handleTouchEnd);
         }
         
         // Expondo a função gameOver globalmente para que o onclick do HTML possa chamá-la
         window.gameOver = function() {
             game.isRunning = false;
-            document.removeEventListener('keydown', handleInput);
-            canvas?.removeEventListener('click', handleInput);
+            
+            // REMOÇÃO DOS LISTENERS DE ENTRADA (NOVO ESTILO)
+            // REMOVIDO: document.removeEventListener('keydown', handleInput);
+            // REMOVIDO: canvas?.removeEventListener('click', handleInput);
+            
+            canvas?.removeEventListener('mousemove', handleMouseMove);
+            canvas?.removeEventListener('mousedown', handleMouseDown);
+            canvas?.removeEventListener('mouseup', handleMouseUp);
+            canvas?.removeEventListener('touchstart', handleTouchStart);
+            canvas?.removeEventListener('touchmove', handleTouchMove);
+            canvas?.removeEventListener('touchend', handleTouchEnd);
 
             const finalScore = game.score * userData.actions.earn;
 
@@ -1729,23 +1816,8 @@
             document.getElementById('game-modal').classList.add('hidden'); 
         }
 
-        function handleInput(event) {
-            if (game.isRunning) {
-                if (event.key === ' ' || event.key === 'ArrowUp' || event.type === 'click') {
-                    if (game.piggy.onCloud) {
-                        game.piggy.vy = game.piggy.jumpPower;
-                        game.piggy.onCloud = false;
-                    }
-                }
-                
-                const moveSpeed = 10;
-                if (event.key === 'ArrowLeft') {
-                    game.piggy.x -= moveSpeed;
-                } else if (event.key === 'ArrowRight') {
-                    game.piggy.x += moveSpeed;
-                }
-            }
-        }
+        // REMOVIDA A FUNÇÃO handleInput (Antigo controle de teclado/clique)
+        // function handleInput(event) { ... }
 
 
         // --- FUNÇÕES DE LÓGICA / DADOS ---
@@ -3195,7 +3267,7 @@
             <h3 class="text-2xl font-itim text-purple-600 mb-2">Mini-Game: Saltitante</h3>
             <canvas id="game-canvas" width="300" height="400" class="mb-3"></canvas>
             <p class="font-itim text-lg mb-2">Pontuação: <span id="game-score" class="font-bold text-orange-500">0</span></p>
-            <p id="game-message" class="font-itim text-sm text-center text-gray-600 mb-3">Use setas ou clique para pular!</p>
+            <p id="game-message" class="font-itim text-sm text-center text-gray-600 mb-3">Mova o dedo na tela e pule nas nuvens!</p>
             <button onclick="gameOver()" class="bg-red-500 text-white p-2 rounded-lg font-itim hover:bg-red-600 action-button">Sair do Jogo</button>
         </div>
     </div>
