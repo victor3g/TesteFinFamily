@@ -104,13 +104,22 @@
         }
         .sidebar { z-index: 900; transition: transform 0.3s ease-in-out; }
 
-        /* Estilos do Canvas Game (Borda mais suave) */
+        /* --- MELHORIA DE UX: CANVAS RESPONSIVO --- */
         #game-canvas {
             border: 4px solid #fff;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            background-color: #e0f7fa; /* Fundo do céu leve */
+            background-color: #e0f7fa; 
             border-radius: 12px;
-            cursor: pointer; /* Adicionado cursor de ponteiro para indicar interação */
+            cursor: pointer;
+            
+            /* Responsividade */
+            width: 100%; /* Ocupa a largura do contêiner */
+            height: auto; /* Altura automática para manter proporção */
+            max-width: 350px; /* Limite máximo para não ficar gigante em desktop */
+            aspect-ratio: 3/4; /* Força a proporção 300x400 */
+            
+            touch-action: none; /* Previne scroll da página ao jogar no celular */
+            display: block; /* Remove espaçamento inline extra */
         }
 
         /* Animação de Flutuação */
@@ -175,6 +184,68 @@
         
         // Constante de duração da recarga do jogo (6 horas)
         const COOLDOWN_DURATION_MS = 6 * 60 * 60 * 1000; 
+
+        // --- SISTEMA DE ÁUDIO (SOUND FX) ---
+        // Sintetizador simples usando Web Audio API para evitar arquivos externos pesados
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            const now = audioCtx.currentTime;
+            
+            if (type === 'coin') {
+                // Som "Pling" (Senoide aguda)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } 
+            else if (type === 'jump') {
+                // Som de Pulo (Quadrada subindo)
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(300, now + 0.1);
+                gainNode.gain.setValueAtTime(0.1, now);
+                gainNode.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            }
+            else if (type === 'success') {
+                // Sucesso (Acorde rápido)
+                [440, 554, 659].forEach((freq, i) => {
+                    const o = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    o.connect(g);
+                    g.connect(audioCtx.destination);
+                    o.type = 'triangle';
+                    o.frequency.value = freq;
+                    g.gain.setValueAtTime(0.1, now + i*0.1);
+                    g.gain.exponentialRampToValueAtTime(0.001, now + i*0.1 + 0.5);
+                    o.start(now + i*0.1);
+                    o.stop(now + i*0.1 + 0.5);
+                });
+            }
+             else if (type === 'error') {
+                // Erro (Dente de serra descendo)
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+        }
 
         // --- CONSTANTES ---
         const BADGES = {
@@ -261,7 +332,7 @@
         const tasksDoneEl = document.getElementById('tasks-done');
         const tasksTotalEl = document.getElementById('tasks-total');
         const progressBarEl = document.getElementById('progress-bar');
-        const coinGoalEl = document.getElementById('coin-goal');
+        // REMOVIDO: const coinGoalEl = document.getElementById('coin-goal'); // Elemento antigo
         const modalEl = document.getElementById('main-modal');
         const modalTitleEl = document.getElementById('modal-title');
         const modalBodyEl = document.getElementById('modal-body');
@@ -333,14 +404,9 @@
                 });
                 
                 // --- Eventos de UI estáticos (Ligados após a inicialização) ---
-                document.getElementById('tasks-edit-section')?.addEventListener('click', () => {
-                     if (userType === 'Child') renderTaskManagementModal();
-                });
+                // REMOVIDO: Listener de Tasks Edit Section para evitar abertura do modal
                 
-                // NOVO: Adiciona listener para a seção de Meta (Progresso)
-                document.getElementById('goal-section')?.addEventListener('click', () => {
-                     if (userType === 'Child') renderGoalSettingModal();
-                });
+                // NOVO: Adiciona listener para a seção de Meta (Progresso) - CORRIGIDO EM SETUP EVENT LISTENERS
                 
                 // Setup dos botões da sidebar (Mantidos para a versão do Pai, mas sem serem usados na navegação da criança)
                 document.getElementById('menu-profile')?.addEventListener('click', () => {
@@ -366,21 +432,37 @@
                     profileIconContainer.classList.add('cursor-pointer'); // Adicionar feedback visual de clique
                 }
 
-                // --- NOVO MAPEMANETO DE BOTÕES DE AÇÃO (CRIANÇA) ---
-                document.getElementById('action-ganhar')?.addEventListener('click', launchGame);
+                setupEventListeners(); // Chama a função consolidada de eventos
 
-                // 1. POUPAR (Permite escolher o valor)
-                document.getElementById('action-poupar')?.addEventListener('click', renderSaveInputModal); 
-
-                // 2. GASTAR (Mapeado para Loja Mágica)
-                document.getElementById('action-gastar')?.addEventListener('click', renderShopModal);
-                
-                // 3. DOAR (Mapeado para Conquistas)
-                document.getElementById('action-doar')?.addEventListener('click', renderBadgesModal); 
             } catch (error) {
                 console.error("Erro ao inicializar Supabase:", error);
                 showModal("Erro de Inicialização", "Não foi possível conectar ao banco de dados. Tente recarregar.");
             }
+        }
+
+        // --- FUNÇÃO CONSOLIDADA DE EVENT LISTENERS ---
+        function setupEventListeners() {
+            // Ações da Criança
+            document.getElementById('action-ganhar')?.addEventListener('click', launchGame);
+            document.getElementById('action-poupar')?.addEventListener('click', renderSaveInputModal); 
+            document.getElementById('action-gastar')?.addEventListener('click', () => renderShopModal('themes'));
+            document.getElementById('action-doar')?.addEventListener('click', renderBadgesModal); 
+            
+            // CORREÇÃO: Listeners para Meta (Texto e Progresso)
+            // Removido listener antigo 'coin-goal' pois o elemento foi removido.
+            // Mantido apenas o listener na seção de progresso que agora contém todas as informações.
+            document.getElementById('goal-section')?.addEventListener('click', () => { 
+                if(userType==='Child') renderGoalSettingModal(); 
+            });
+
+            // Login
+            document.getElementById('login-type-toggle')?.addEventListener('change', (e) => {
+                // Lógica de toggle já existente, apenas reatribuindo se necessário ou mantendo o listener inline original se preferir
+                // Mas para consistência, mantemos a lógica original que estava espalhada
+            });
+            
+            // A lógica de login form submit já está sendo tratada abaixo, mantemos lá ou trazemos pra cá.
+            // Vou manter os listeners originais que estavam soltos para não quebrar a lógica de login existente.
         }
         
         // --- FUNÇÕES DE NAVEGAÇÃO / ROTAS ---
@@ -631,6 +713,7 @@
                 console.error("Erro de login Supabase:", error);
                 messageEl.textContent = 'Credenciais incorretas. Tente novamente.';
                 messageEl.classList.add('text-red-500');
+                playSound('error');
                 return;
             }
 
@@ -644,6 +727,7 @@
                 // Caso em que o Supabase Auth não retorna erro, mas também não retorna usuário (raro, mas cauteloso)
                 messageEl.textContent = 'Credenciais incorretas. Tente novamente.';
                 messageEl.classList.add('text-red-500');
+                playSound('error');
             }
         }
 
@@ -664,6 +748,7 @@
                 if (error) {
                     console.error("Erro ao buscar perfil da criança:", error);
                     document.getElementById('login-message').textContent = 'Erro de comunicação com o banco de dados.';
+                    playSound('error');
                     return;
                 }
 
@@ -679,16 +764,19 @@
                     if (child) {
                         // Encontrado! Passa o UID da criança (child.uid) e o ID do pai (parentId)
                         showChildApp(child.uid, parentId); 
+                        playSound('success');
                         return;
                     }
                 }
                 
                 // Se não encontrar em 'parent_control', significa que foi deletado ou não existe
                 document.getElementById('login-message').textContent = 'Código de acesso inválido ou não encontrado.';
+                playSound('error');
 
             } catch (e) {
                 console.error("Erro inesperado no login da criança:", e);
                 document.getElementById('login-message').textContent = 'Ocorreu um erro inesperado.';
+                playSound('error');
             }
         }
         
@@ -708,6 +796,7 @@
             if (password !== confirmPassword) {
                 messageEl.textContent = "Erro: As senhas não coincidem.";
                 messageEl.classList.add('text-red-500');
+                playSound('error');
                 return;
             }
             
@@ -715,6 +804,7 @@
             if (password.length < 6) {
                  messageEl.textContent = "Erro: A senha deve ter no mínimo 6 dígitos.";
                  messageEl.classList.add('text-red-500');
+                 playSound('error');
                  return;
             }
             // ----------------------------------------------------
@@ -748,6 +838,7 @@
                 messageEl.textContent = translatedMessage;
                 messageEl.classList.remove('text-gray-600');
                 messageEl.classList.add('text-red-500');
+                playSound('error');
                 
                 // Loga apenas erros desconhecidos ou críticos
                 if (!translatedMessage.includes("Erro: A senha deve ter")) {
@@ -773,6 +864,7 @@
                  messageEl.textContent = "Erro: Usuário já existe ou outro problema. Verifique o console.";
                  messageEl.classList.remove('text-gray-600');
                  messageEl.classList.add('text-red-500');
+                 playSound('error');
             }
         });
 
@@ -796,6 +888,7 @@
                  messageEl.textContent = `Erro: ${error.message}`;
                  messageEl.classList.remove('text-gray-600');
                  messageEl.classList.add('text-red-500');
+                 playSound('error');
                  return;
             }
             
@@ -823,11 +916,13 @@
             if (newPassword !== confirmPassword) {
                  messageEl.textContent = "Erro: As senhas não coincidem.";
                  messageEl.classList.add('text-red-500');
+                 playSound('error');
                  return;
             }
             if (newPassword.length < 6) {
                  messageEl.textContent = "Erro: A senha deve ter no mínimo 6 dígitos.";
                  messageEl.classList.add('text-red-500');
+                 playSound('error');
                  return;
             }
 
@@ -841,6 +936,7 @@
                 messageEl.textContent = `Erro ao redefinir: ${error.message}. Tente novamente.`;
                 messageEl.classList.remove('text-gray-600');
                 messageEl.classList.add('text-red-500');
+                playSound('error');
                 return;
             }
 
@@ -1204,6 +1300,9 @@
             reactionTimeout = setTimeout(() => {
                 piggyGreetingEl.classList.add('opacity-0');
             }, 2000);
+            
+            // Som de pulo ao tocar no mascote
+            playSound('jump');
         }
         
         function isGameOnCooldown() {
@@ -1415,9 +1514,11 @@
         // NOVO: EXECUTA A TRANSAÇÃO DE POUPANÇA
         function executeSave(saveAmount) {
             if (isNaN(saveAmount) || saveAmount <= 0) {
+                playSound('error');
                 return showModal("Erro", "Por favor, insira um valor válido.");
             }
             if (userData.coins < saveAmount) {
+                playSound('error');
                 return showModal("Saldo Insuficiente", `Você precisa de **${saveAmount} moedas**, mas só tem ${userData.coins}.`);
             }
 
@@ -1429,6 +1530,7 @@
             checkBadges();
             saveUserData();
             hideModal();
+            playSound('coin'); // Som de guardar dinheiro
             showModal("Poupança Completa! 🏦", `Você guardou **${saveAmount} moedas** na sua meta!`);
             updateUI(); // CORREÇÃO: Força a atualização da UI
         }
@@ -1483,6 +1585,7 @@
                     if (success) {
                         saveUserData();
                         hideModal();
+                        playSound('coin');
                         
                         showModal("Gasto Realizado! 💸", `
                             <p class="mb-4 font-itim">**${spendAmount} moedas** foram gastas! (Categoria: ${category}).</p>
@@ -1513,6 +1616,7 @@
                         updateUI(); // CORREÇÃO: Força a atualização da UI
 
                     } else {
+                        playSound('error');
                         showModal("Erro de Saldo", "Saldo insuficiente na conta selecionada.");
                     }
                 };
@@ -1537,6 +1641,7 @@
                  
                 if (userData.coins < amount) {
                     hideModal();
+                    playSound('error');
                     return showModal("Saldo Insuficiente", `Você precisa de pelo menos **${amount} moedas** para doar.`);
                 }
                 
@@ -1547,6 +1652,7 @@
                 checkBadges();
                 saveUserData();
                 hideModal();
+                playSound('success');
                 showModal("Doação Feita! ❤️", `Obrigado por doar **${amount} moedas**! Você fez o bem!`);
                 updateUI(); // CORREÇÃO: Força a atualização da UI
             });
@@ -1556,6 +1662,7 @@
         function launchGame() {
             if (isGameOnCooldown()) {
                  const remainingTime = getRemainingCooldownTime();
+                 playSound('error');
                  return showModal("Jogo em Recarga", `Você pode jogar novamente em **${remainingTime}**.`);
             }
 
@@ -1563,7 +1670,7 @@
             startGame();
         }
 
-        // --- GAME ASSETS E LÓGICA (Simplificada) ---
+        // --- GAME ASSETS E LÓGICA (Simplificada e Responsiva) ---
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas?.getContext('2d');
         const GAME_WIDTH = 300;
@@ -1622,15 +1729,24 @@
             ctx.fillText('💎', x - 15, y + 25);
         }
 
-        // NOVO: Funções de manipulação de entrada de mouse/toque para controle horizontal
+        // --- NOVO: Mapeamento Responsivo de Toque/Mouse ---
+        function getScaledX(evt) {
+            const rect = canvas.getBoundingClientRect();
+            // Verifica se é toque ou mouse
+            const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+            // Calcula a escala X (canvas interno / largura visual)
+            const scaleX = canvas.width / rect.width; 
+            return (clientX - rect.left) * scaleX;
+        }
+
         function handleMouseDown(e) {
             isDragging = true;
-            touchX = e.offsetX;
+            touchX = getScaledX(e);
         }
 
         function handleMouseMove(e) {
             if (isDragging) {
-                touchX = e.offsetX;
+                touchX = getScaledX(e);
             }
         }
 
@@ -1641,16 +1757,13 @@
         function handleTouchStart(e) {
             e.preventDefault(); 
             isDragging = true;
-            const rect = canvas.getBoundingClientRect();
-            // Usa o primeiro toque
-            touchX = e.touches[0].clientX - rect.left; 
+            touchX = getScaledX(e); 
         }
 
         function handleTouchMove(e) {
             e.preventDefault(); 
             if (isDragging) {
-                const rect = canvas.getBoundingClientRect();
-                touchX = e.touches[0].clientX - rect.left;
+                touchX = getScaledX(e);
             }
         }
 
@@ -1709,6 +1822,7 @@
                     game.piggy.vy = game.piggy.jumpPower; 
                     game.piggy.y = cloud.y - game.piggy.h; // Posiciona em cima da nuvem
                     game.piggy.onCloud = true; // Necessário para a lógica de spawn de nuvens
+                    playSound('jump'); // Som de pulo
                 }
             });
 
@@ -1749,9 +1863,11 @@
                         const points = game.multiplier.active ? 2 : 1;
                         game.score += points;
                         document.getElementById('game-score').textContent = game.score;
+                        playSound('coin'); // Som de moeda
                     } else if (coin.type === 'multiplier') {
                         game.multiplier.active = true;
                         game.multiplier.remainingTime = 5 * 60;
+                        playSound('coin'); // Som ao pegar powerup
                     }
                     return false;
                 }
@@ -1764,6 +1880,7 @@
                     
                     game.score = Math.max(0, game.score - obstacle.penalty);
                     document.getElementById('game-score').textContent = game.score;
+                    playSound('error'); // Som de penalidade
                     return false;
                 }
                 return obstacle.y < GAME_HEIGHT;
@@ -1826,9 +1943,6 @@
             
             requestAnimationFrame(gameLoop);
             
-            // REMOVIDO: document.addEventListener('keydown', handleInput);
-            // REMOVIDO: canvas?.addEventListener('click', handleInput);
-            
             // NOVO: Adiciona listeners de mouse e toque
             canvas?.addEventListener('mousemove', handleMouseMove);
             canvas?.addEventListener('mousedown', handleMouseDown);
@@ -1844,9 +1958,6 @@
             game.isRunning = false;
             
             // REMOÇÃO DOS LISTENERS DE ENTRADA (NOVO ESTILO)
-            // REMOVIDO: document.removeEventListener('keydown', handleInput);
-            // REMOVIDO: canvas?.removeEventListener('click', handleInput);
-            
             canvas?.removeEventListener('mousemove', handleMouseMove);
             canvas?.removeEventListener('mousedown', handleMouseDown);
             canvas?.removeEventListener('mouseup', handleMouseUp);
@@ -1863,10 +1974,12 @@
                 checkBadges();
                 saveUserData();
                 document.getElementById('game-message').textContent = `FIM DE JOGO! Você ganhou ${finalScore} moedas!`;
+                playSound('success');
                 showModal("Vitória no Jogo! 🥳", `Você coletou **${game.score} itens** e ganhou **${finalScore} moedas**!`);
                 updateUI(); // CORREÇÃO: Força a atualização da UI
             } else {
                  document.getElementById('game-message').textContent = 'FIM DE JOGO! Tente novamente para ganhar moedas.';
+                 playSound('error');
             }
 
             document.getElementById('game-modal').classList.add('hidden'); 
@@ -1895,6 +2008,7 @@
                     userData.progress.savedAmount += interestGained;
                     userData.lastInterestDate = now.getTime(); 
                     addTransaction('earn', interestGained, `Juros (${diffDays} dias) da Poupança`);
+                    playSound('coin');
                     showModal("Juros Ganhos! ✨", `Sua poupança rendeu **${interestGained} moedas** de juros acumulados!`);
                     saveUserData();
                     updateUI(); // CORREÇÃO: Força a atualização da UI
@@ -1909,6 +2023,7 @@
                 const badge = BADGES[badgeId];
                 if (badge) {
                     showModal(`Nova Conquista: ${badge.name}! 🏆`, `${badge.description} Parabéns!`);
+                    playSound('success');
                     saveUserData();
                     updateUI(); // CORREÇÃO: Força a atualização da UI
                 }
@@ -2015,11 +2130,13 @@
                     userData.coins += reward; 
                     addTransaction('earn', reward, `Tarefa concluída: ${task.text}`);
                     checkBadges(); 
+                    playSound('success');
                     showModal("Tarefa Concluída!", `Parabéns! Você ganhou **${reward} moedas**!`);
                 } else if (wasCompleted && !task.completed) {
                     const penalty = userData.actions.earn;
                     userData.coins = Math.max(0, userData.coins - penalty);
                     addTransaction('spend', penalty, `Tarefa desfeita: ${task.text}`);
+                    playSound('error');
                     showModal("Tarefa Desfeita", `Você perdeu **${penalty} moedas** de volta.`);
                 }
                 saveUserData();
@@ -2063,9 +2180,11 @@
                     userData.progress.targetName = newName;
                     saveUserData();
                     hideModal();
+                    playSound('success');
                     showModal("Sucesso!", `O nome da meta foi atualizado para **${newName}**!`);
                     updateUI(); // CORREÇÃO: Força a atualização da UI
                 } else {
+                    playSound('error');
                     showModal("Erro", "O nome da meta não pode ser vazio.");
                 }
             });
@@ -2146,6 +2265,7 @@
 
                     if (!owned && price > 0) {
                         if (userData.coins < price) {
+                             playSound('error');
                              return showModal("Moedas Insuficientes", `Você precisa de **${price} moedas** para comprar esta emoção!`);
                         }
                         
@@ -2154,6 +2274,7 @@
                         userData.currentEmotion.shopOwned.push(id);
                         userData.currentEmotion.value = value;
                         addTransaction('spend', price, `Compra de Emoção: ${value}`);
+                        playSound('coin');
                         showModal("Emoção Desbloqueada!", `Você comprou e está usando **${value}**!`);
                     } else {
                         // Equipa
@@ -2319,6 +2440,7 @@
 
                     if (!owned) {
                         if (userData.coins < price) {
+                             playSound('error');
                              return showModal("Moedas Insuficientes", `Você precisa de **${price} moedas** para comprar este item!`);
                         }
                         
@@ -2342,6 +2464,7 @@
                             userData.currentEmotion = { value: btn.dataset.value, shopOwned: userData.currentEmotion.shopOwned };
                         }
 
+                        playSound('coin');
                         showModal("Compra Concluída!", `Você comprou e equipou **${btn.textContent}** por **${price} moedas**!`);
 
                     } else {
@@ -2531,7 +2654,8 @@
             
             // ATUALIZADO: Usando parentData.name, que agora deve ser o primeiro nome
             if (parentGreetingEl) {
-                 parentGreetingEl.textContent = `Olá, ${parentData.name}!`;
+                 // Adiciona ícone de edição ao lado do nome
+                 parentGreetingEl.innerHTML = `Olá, ${parentData.name}! <button onclick="renderEditParentNameModal()" class="text-gray-500 hover:text-blue-500 text-xl ml-2" title="Editar Nome"><i class="fa-solid fa-pencil"></i></button>`;
             }
             
             try {
@@ -2715,7 +2839,12 @@
                         <div class="soft-card p-4 mb-4 border-2 border-green-300">
                             <div class="flex items-center space-x-3 border-b pb-2 mb-3">
                                 ${iconHtml} <!-- NOVO: Ícone aqui -->
-                                <h4 class="text-2xl font-itim text-green-700">${child.name} <span class="ml-2 text-3xl">${currentEmotion}</span></h4>
+                                <h4 class="text-2xl font-itim text-green-700 flex items-center">
+                                    ${child.name} 
+                                    <span class="ml-2 text-3xl">${currentEmotion}</span>
+                                    <!-- Botão Editar Nome da Criança -->
+                                    <button onclick="renderEditChildNameModal('${currentChildId}', '${child.name}')" class="ml-3 text-gray-400 hover:text-blue-500 text-lg" title="Editar Nome"><i class="fa-solid fa-pencil"></i></button>
+                                </h4>
                             </div>
                             <p class="text-xl font-itim mb-2">Código de Acesso: <span class="text-blue-600 font-bold">${child.code}</span></p>
                             <p class="text-xl font-itim mb-2">Saldo Atual: <span class="text-orange-500 font-bold">${childData.coins} moedas</span></p>
@@ -2940,6 +3069,85 @@
             });
         }
         
+        // --- NOVAS FUNÇÕES DE EDIÇÃO DE NOME ---
+
+        // 1. Modal e Lógica para Editar Nome do PAI
+        window.renderEditParentNameModal = function() {
+            showModal("Editar Meu Nome", `
+                <div class="space-y-4">
+                    <input type="text" id="edit-parent-name-input" value="${parentData.name}" class="soft-input w-full p-3 border rounded-lg font-itim text-lg">
+                    <button id="save-parent-name-btn" class="w-full bg-blue-500 text-white p-3 rounded-lg font-itim text-xl hover:bg-blue-600 transition-colors action-button">
+                        Salvar Nome
+                    </button>
+                </div>
+            `);
+
+            document.getElementById('save-parent-name-btn')?.addEventListener('click', async () => {
+                const newName = document.getElementById('edit-parent-name-input').value.trim();
+                if (newName) {
+                    parentData.name = newName;
+                    await saveParentData(); // Salva no Supabase
+                    renderParentDashboard(); // Atualiza a UI do Dashboard
+                    hideModal();
+                    playSound('success');
+                    showModal("Sucesso", `Seu nome foi alterado para **${newName}**!`);
+                } else {
+                    playSound('error');
+                    showModal("Erro", "O nome não pode ser vazio.");
+                }
+            });
+        }
+
+        // 2. Modal e Lógica para Editar Nome da CRIANÇA
+        window.renderEditChildNameModal = function(childUid, currentName) {
+            showModal("Editar Nome da Criança", `
+                <div class="space-y-4">
+                    <input type="text" id="edit-child-name-input" value="${currentName}" class="soft-input w-full p-3 border rounded-lg font-itim text-lg">
+                    <button id="save-child-name-btn" class="w-full bg-green-500 text-white p-3 rounded-lg font-itim text-xl hover:bg-green-600 transition-colors action-button">
+                        Salvar Nome
+                    </button>
+                </div>
+            `);
+
+            document.getElementById('save-child-name-btn')?.addEventListener('click', async () => {
+                const newName = document.getElementById('edit-child-name-input').value.trim();
+                if (newName && childUid) {
+                    try {
+                        // 1. Atualiza o documento individual da criança
+                        const childDataSnapshot = await getChildDataSnapshot(childUid);
+                        if (childDataSnapshot) {
+                            childDataSnapshot.name = newName;
+                            await supabase
+                                .from('child_profiles')
+                                .update({ data: childDataSnapshot })
+                                .eq('user_id', childUid);
+                        }
+
+                        // 2. Atualiza a lista de referência dentro do documento do pai
+                        const childInParentList = parentData.children.find(c => c.uid === childUid);
+                        if (childInParentList) {
+                            childInParentList.name = newName;
+                            await saveParentData(); // Salva a lista do pai atualizada
+                        }
+
+                        // 3. Atualiza a UI
+                        renderChildManagement(childDataSnapshot); // Atualiza a tela de gestão
+                        hideModal();
+                        playSound('success');
+                        showModal("Sucesso", `O nome foi alterado para **${newName}**!`);
+
+                    } catch (e) {
+                        console.error("Erro ao atualizar nome da criança:", e);
+                        playSound('error');
+                        showModal("Erro", "Falha ao salvar o nome.");
+                    }
+                } else {
+                    playSound('error');
+                    showModal("Erro", "Nome inválido.");
+                }
+            });
+        }
+        
         initSupabase(); // CHAMADA ADICIONADA PARA INICIALIZAR O FLUXO DO APLICATIVO (Renomeado)
     </script>
     
@@ -3113,7 +3321,9 @@
             <div class="flex justify-between items-start z-20 relative mb-4">
                  <!-- CORREÇÃO: Saudação mais espaçada -->
                  <!-- ATUALIZADO: O JS agora define o nome correto aqui -->
-                 <h1 id="parent-greeting" class="text-4xl font-itim text-black mt-2">Olá, Responsável!</h1>
+                 <h1 id="parent-greeting" class="text-4xl font-itim text-black mt-2 flex items-center">
+                    Olá, Responsável!
+                 </h1>
                  
                  <!-- Botões de Ação Superiores (Ícones) -->
                  <div class="flex space-x-2 pt-2">
@@ -3237,11 +3447,7 @@
                                 <h2 id="user-name" class="text-3xl font-itim text-gray-800">Alex</h2>
                                 <div id="emotion-display-container" class="text-3xl p-1 cursor-pointer transition-transform hover:scale-110 active:scale-95 soft-card rounded-full" aria-label="Selecione sua Emoção">😊</div>
                             </div>
-                            <!-- NOVO: Exibição separada para o nome e valor da meta -->
-                            <p id="coin-goal" class="text-sm font-itim text-gray-600 mt-1 cursor-pointer" id="goal-section">
-                                <span id="goal-name-display">Meta: Brinquedo Novo</span>
-                                <span class="font-bold ml-1 text-xs" id="goal-amount-display">(0/500 moedas)</span>
-                            </p>
+                            <!-- META REMOVIDA DAQUI E MOVIDA PARA A BARRA DE PROGRESSO -->
                         </div>
                     </div>
                 </div>
@@ -3250,20 +3456,30 @@
                 <div class="soft-card p-4 mt-6 flex-grow overflow-y-auto">
                     <h3 class="text-xl font-itim text-gray-700 mb-3">Progresso</h3>
                     
-                    <!-- Barra de Progresso (Poupança) -->
-                    <div class="mb-4 cursor-pointer" id="goal-section">
-                        <div class="w-full bg-gray-300 rounded-full h-4">
-                            <!-- Cantos mais arredondados para a barra de progresso -->
-                            <div id="progress-bar" class="h-4 rounded-full bg-green-500 transition-all duration-500" style="width: 0%;"></div>
+                    <!-- Barra de Progresso (Poupança) - (INTERATIVO - AGORA CONTÉM A META) -->
+                    <div class="mb-4 cursor-pointer hover:opacity-80 transition-opacity p-1" id="goal-section" title="Alterar Meta">
+                        
+                        <!-- Cabeçalho da Meta (Nome e Valor) -->
+                        <div class="flex justify-between items-end mb-1 px-1">
+                             <span id="goal-name-display" class="font-bold text-blue-600 text-lg leading-none font-itim">Meta</span>
+                             <span id="goal-amount-display" class="text-xs text-gray-500 font-bold font-itim">0/0 moedas</span>
                         </div>
-                        <div class="flex justify-between mt-1 text-sm font-itim text-gray-600">
+
+                        <div class="w-full bg-gray-300 rounded-full h-4 relative overflow-hidden border border-gray-200">
+                            <!-- Cantos mais arredondados para a barra de progresso -->
+                            <div id="progress-bar" class="h-full rounded-full bg-green-500 transition-all duration-500 relative" style="width: 0%;">
+                                <!-- Efeito de brilho animado -->
+                                <div class="absolute top-0 left-0 bottom-0 right-0 bg-white opacity-20 w-full animate-pulse"></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between mt-1 text-sm font-itim text-gray-600 px-1">
                             <span>Poupança</span>
-                            <span id="progress-percent">0%</span>
+                            <span id="progress-percent" class="font-bold text-green-600">0%</span>
                         </div>
                     </div>
 
-                    <!-- Tarefas -->
-                    <div class="p-3 border rounded-xl soft-card cursor-pointer" id="tasks-edit-section">
+                    <!-- Tarefas (ESTÁTICO - SEM CLIQUE) -->
+                    <div class="p-3 border rounded-xl soft-card bg-gray-50">
                         <div class="flex justify-between items-center">
                             <span class="text-lg font-itim text-gray-800">Tarefas Diárias</span>
                             <span class="text-lg font-itim text-purple-600"><span id="tasks-done">0</span>/<span id="tasks-total">0</span></span>
@@ -3331,7 +3547,7 @@
     
     <!-- MODAL DO MINI-GAME -->
     <div id="game-modal" class="hidden modal-overlay fixed inset-0 flex items-center justify-center p-4">
-        <div class="modal-content bg-white p-4 rounded-xl max-w-xs flex flex-col items-center">
+        <div class="modal-content bg-white p-4 rounded-xl max-w-xs flex flex-col items-center w-full">
             <h3 class="text-2xl font-itim text-purple-600 mb-2">Mini-Game: Saltitante</h3>
             <canvas id="game-canvas" width="300" height="400" class="mb-3"></canvas>
             <p class="font-itim text-lg mb-2">Pontuação: <span id="game-score" class="font-bold text-orange-500">0</span></p>
