@@ -1163,8 +1163,9 @@
                      // SEGURANÇA: Se o usuário logado mudou, ignora updates do canal antigo
                      if (currentUserId !== uid) return;
 
-                     const docData = payload.new.data.data;
-                     userData = deepMergeUserData(userData, { ...docData, user_id: uid });
+                    // O payload.new.data já contém o objeto JSON salvo na coluna 'data'
+                    const docData = payload.new.data;
+                    userData = deepMergeUserData(userData, { ...docData, user_id: uid });
                      applyTheme(userData.settings.theme); 
                      updateUI();
                 })
@@ -1196,7 +1197,8 @@
                      // SEGURANÇA: Se o usuário logado mudou, ignora updates do canal antigo
                      if (currentUserId !== uid) return;
 
-                     const data = payload.new.data.data;
+                     // O payload.new.data contém o objeto 'data' armazenado no registro
+                     const data = payload.new.data;
                      parentData = { ...parentData, ...data };
                      renderParentDashboard();
                  })
