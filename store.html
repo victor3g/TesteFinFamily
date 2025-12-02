@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Loja Mágica</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Fredoka', sans-serif; background: #F3E8FF; }
+        .soft-card { background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s; }
+        .soft-card:active { transform: scale(0.98); }
+        .tab-btn.active { color: #9333EA; border-bottom: 3px solid #9333EA; }
+    </style>
+</head>
+<body class="pb-20 relative">
+    
+    <!-- Header -->
+    <div class="sticky top-0 bg-white shadow-sm z-20">
+        <div class="flex justify-between items-center p-4">
+            <a href="ChildDashboard.html" class="text-gray-500 hover:text-purple-600 text-xl"><i class="fa-solid fa-arrow-left"></i></a>
+            <h1 class="text-xl font-bold text-purple-700">Loja Mágica ✨</h1>
+            <div class="bg-orange-100 text-orange-600 px-3 py-1 rounded-full font-bold text-sm">
+                <i class="fa-solid fa-coins mr-1"></i> <span id="user-coins">...</span>
+            </div>
+        </div>
+        <div class="flex overflow-x-auto px-4 pb-0 gap-6 text-gray-400 font-bold text-sm no-scrollbar">
+            <button onclick="setTab('themes')" id="tab-themes" class="tab-btn active pb-3 whitespace-nowrap">Temas</button>
+            <button onclick="setTab('icons')" id="tab-icons" class="tab-btn pb-3 whitespace-nowrap">Ícones</button>
+            <button onclick="setTab('emotions')" id="tab-emotions" class="tab-btn pb-3 whitespace-nowrap">Emoções</button>
+            <button onclick="setTab('pets')" id="tab-pets" class="tab-btn pb-3 whitespace-nowrap">Mascotes</button>
+        </div>
+    </div>
+
+    <!-- Grid de Itens -->
+    <div id="shop-grid" class="p-4 grid grid-cols-2 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
+        <!-- Itens carregados via JS -->
+    </div>
+
+    <!-- Modal de Confirmação/Informação -->
+    <div id="shop-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in-up">
+        <div class="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl relative border-4 border-white text-center">
+            <div id="modal-icon" class="text-5xl mb-4">✨</div>
+            <h3 id="modal-title" class="text-2xl font-bold text-gray-800 mb-2">Título</h3>
+            <p id="modal-message" class="text-gray-600 mb-6">Mensagem aqui.</p>
+            
+            <!-- Dica Educativa (Opcional) -->
+            <div id="modal-tip" class="hidden bg-blue-50 p-3 rounded-lg mb-4 text-xs text-blue-600 italic">
+                <i class="fa-solid fa-lightbulb mr-1"></i> <span>Dica de economia</span>
+            </div>
+
+            <div id="modal-actions" class="flex gap-2 justify-center">
+                <!-- Botões injetados dinamicamente -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabase = window.supabase.createClient("https://jwwgsyibgwpvgfbsltzr.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3d2dzeWliZ3dwdmdmYnNsdHpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNzkzMDAsImV4cCI6MjA3ODk1NTMwMH0.9iA_dKu4UJf-tQV03YdG8J1N4FhuP_flxHr7HWDbt9I");
+        
+        let userData = null;
+        let currentTab = 'themes';
+
+        // --- EXPANDED ITEMS LIST (PREÇOS AJUSTADOS) ---
+        const ITEMS = {
+            themes: [
+                { id: 'rosa', name: 'Doce Sonho', price: 20, colors: ['#FFC0CB', '#ADD8E6'], type: 'theme' },
+                { id: 'sol', name: 'Dia de Sol', price: 40, colors: ['#FFC72C', '#F97316'], type: 'theme' },
+                { id: 'noite', name: 'Espaço', price: 60, colors: ['#483D8B', '#00008B'], type: 'theme' },
+                { id: 'floresta', name: 'Floresta', price: 50, colors: ['#A7F3D0', '#059669'], type: 'theme' },
+                { id: 'oceano', name: 'Fundo do Mar', price: 55, colors: ['#00BFFF', '#1E90FF'], type: 'theme' },
+                { id: 'vulcao', name: 'Vulcão', price: 80, colors: ['#FF4500', '#8B0000'], type: 'theme' },
+                { id: 'unicornio', name: 'Unicórnio', price: 90, colors: ['#E0B0FF', '#FFB6C1'], type: 'theme' },
+                { id: 'cyber', name: 'Cyberpunk', price: 100, colors: ['#00FF00', '#FF00FF'], type: 'theme' }
+            ],
+            icons: [
+                { id: 'fa-cat', name: 'Gatinho', price: 15, icon: 'fa-cat', type: 'icon' },
+                { id: 'fa-dog', name: 'Cachorro', price: 15, icon: 'fa-dog', type: 'icon' },
+                { id: 'fa-robot', name: 'Robô', price: 25, icon: 'fa-robot', type: 'icon' },
+                { id: 'fa-dragon', name: 'Dragão', price: 40, icon: 'fa-dragon', type: 'icon' },
+                { id: 'fa-ghost', name: 'Fantasma', price: 20, icon: 'fa-ghost', type: 'icon' },
+                { id: 'fa-gamepad', name: 'Gamer', price: 20, icon: 'fa-gamepad', type: 'icon' },
+                { id: 'fa-music', name: 'Músico', price: 18, icon: 'fa-music', type: 'icon' },
+                { id: 'fa-futbol', name: 'Atleta', price: 22, icon: 'fa-futbol', type: 'icon' },
+                { id: 'fa-crown', name: 'Realeza', price: 60, icon: 'fa-crown', type: 'icon' }
+            ],
+            emotions: [
+                { id: '😎', name: 'Legal', price: 10, value: '😎', type: 'emotion' },
+                { id: '🤩', name: 'Estrela', price: 20, value: '🤩', type: 'emotion' },
+                { id: '🤠', name: 'Cowboy', price: 15, value: '🤠', type: 'emotion' },
+                { id: '🥳', name: 'Festa', price: 25, value: '🥳', type: 'emotion' },
+                { id: '🤓', name: 'Sabido', price: 18, value: '🤓', type: 'emotion' },
+                { id: '🥶', name: 'Gelado', price: 12, value: '🥶', type: 'emotion' },
+                { id: '🤯', name: 'Explosão', price: 30, value: '🤯', type: 'emotion' },
+                { id: '🤑', name: 'Rico', price: 50, value: '🤑', type: 'emotion' }
+            ],
+            pets: [
+                { id: '🐱', name: 'Gato', price: 35, value: '🐱', type: 'pet' },
+                { id: '🐶', name: 'Cão', price: 35, value: '🐶', type: 'pet' },
+                { id: '🦊', name: 'Raposa', price: 50, value: '🦊', type: 'pet' },
+                { id: '🦁', name: 'Leão', price: 60, value: '🦁', type: 'pet' },
+                { id: '🦄', name: 'Unicórnio', price: 120, value: '🦄', type: 'pet' },
+                { id: '🦕', name: 'Dino', price: 80, value: '🦕', type: 'pet' },
+                { id: '🐙', name: 'Polvo', price: 55, value: '🐙', type: 'pet' },
+                { id: '👽', name: 'Alien', price: 90, value: '👽', type: 'pet' }
+            ]
+        };
+
+        async function init() {
+            const session = JSON.parse(localStorage.getItem('fin_session'));
+            if (!session) return window.location.href = 'fluxo-login.html';
+            const { data } = await supabase.from('child_profiles').select('data').eq('user_id', session.uid).single();
+            userData = data.data;
+            
+            // Garante estrutura de inventário se não existir
+            if(!userData.inventory) {
+                userData.inventory = { 
+                    themes: ['padrão'], 
+                    icons: ['fa-user-astronaut'], 
+                    emotions: ['😊', '😢', '😠', '😐'], // Emoções básicas padrão
+                    pets: ['🐷'] 
+                };
+            }
+            
+            document.getElementById('user-coins').innerText = userData.coins;
+            renderItems();
+        }
+
+        function setTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            renderItems();
+        }
+
+        function renderItems() {
+            const container = document.getElementById('shop-grid');
+            container.innerHTML = '';
+            
+            ITEMS[currentTab].forEach(item => {
+                const isOwned = checkOwned(item);
+                const el = document.createElement('div');
+                el.className = "soft-card p-4 flex flex-col items-center text-center relative overflow-hidden";
+                
+                let visual = '';
+                if(item.type === 'theme') visual = `<div class="w-16 h-16 rounded-full mb-3 border-4 border-white shadow-sm" style="background: linear-gradient(135deg, ${item.colors[0]}, ${item.colors[1]})"></div>`;
+                else if(item.type === 'icon') visual = `<i class="fa-solid ${item.icon} text-4xl text-gray-600 mb-3"></i>`;
+                else visual = `<span class="text-5xl mb-3">${item.value}</span>`;
+
+                el.innerHTML = `
+                    ${visual}
+                    <h3 class="font-bold text-gray-800 mb-1">${item.name}</h3>
+                    ${isOwned 
+                        ? `<span class="text-green-500 font-bold text-sm bg-green-100 px-3 py-1 rounded-full mt-auto flex items-center justify-center w-full"><i class="fa-solid fa-check mr-1"></i> Adquirido</span>` 
+                        : `<button onclick="confirmPurchase('${item.id}', '${item.name}', ${item.price}, '${item.type}')" class="w-full bg-purple-500 text-white py-2 rounded-lg font-bold hover:bg-purple-600 shadow mt-auto text-sm transition-colors">Comprar ${item.price}</button>`
+                    }
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function checkOwned(item) {
+            if (!userData || !userData.inventory) return false;
+            const inv = userData.inventory;
+            
+            // Verifica no inventário correto baseado no tipo
+            if(item.type === 'theme') return inv.themes && inv.themes.includes(item.id);
+            if(item.type === 'icon') return inv.icons && inv.icons.includes(item.id);
+            if(item.type === 'emotion') return inv.emotions && inv.emotions.includes(item.id); // Verifica pelo ID
+            if(item.type === 'pet') return inv.pets && inv.pets.includes(item.id);
+            
+            return false;
+        }
+
+        // --- SISTEMA DE MODAIS ---
+        const modalEl = document.getElementById('shop-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMsg = document.getElementById('modal-message');
+        const modalActions = document.getElementById('modal-actions');
+        const modalIcon = document.getElementById('modal-icon');
+        const modalTip = document.getElementById('modal-tip');
+
+        function showModal(title, msg, icon, buttons, tip = null) {
+            modalTitle.innerText = title;
+            modalMsg.innerText = msg;
+            modalIcon.innerHTML = icon;
+            modalActions.innerHTML = '';
+            
+            if (tip) {
+                modalTip.querySelector('span').innerText = tip;
+                modalTip.classList.remove('hidden');
+            } else {
+                modalTip.classList.add('hidden');
+            }
+            
+            buttons.forEach(btn => {
+                const b = document.createElement('button');
+                b.className = `px-6 py-2 rounded-xl font-bold shadow-md transition-colors ${btn.class}`;
+                b.innerText = btn.text;
+                b.onclick = () => {
+                    if (btn.action) btn.action();
+                    if (btn.close) closeModal();
+                };
+                modalActions.appendChild(b);
+            });
+            
+            modalEl.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            modalEl.classList.add('hidden');
+        }
+
+        window.confirmPurchase = (itemId, itemName, price, type) => {
+            if(userData.coins < price) {
+                showModal("Ops! Sem moedas 🪙", `Você precisa de mais ${price - userData.coins} moedas para comprar ${itemName}. Jogue ou faça tarefas!`, "😢", [
+                    { text: "Entendi", class: "bg-blue-500 text-white hover:bg-blue-600", close: true }
+                ]);
+                return;
+            }
+
+            // Lógica de Dica Financeira (Educativa)
+            let educationalTip = null;
+            if (price >= 80) {
+                educationalTip = "Uau, isso é caro! Tem certeza que vale a pena gastar tantas moedas?";
+            } else if (price >= 40) {
+                educationalTip = "Lembre-se: comprar coisas legais é bom, mas guardar para o seu sonho é melhor ainda!";
+            } else {
+                educationalTip = "Uma comprinha pequena não faz mal, mas cuidado para não gastar tudo!";
+            }
+
+            showModal("Comprar Item? 🛍️", `Deseja gastar ${price} moedas para comprar "${itemName}"?`, "🤔", [
+                { text: "Melhor não", class: "bg-gray-200 text-gray-700 hover:bg-gray-300", close: true },
+                { text: "Sim, eu quero!", class: "bg-green-500 text-white hover:bg-green-600", close: true, action: () => executePurchase(itemId, price, type, itemName) }
+            ], educationalTip);
+        };
+
+        window.executePurchase = async (itemId, price, type, itemName) => {
+            // Atualiza Objeto Local
+            userData.coins -= price;
+            
+            // Adiciona ao inventário correto e verifica existência de arrays
+            if (!userData.inventory.themes) userData.inventory.themes = ['padrão'];
+            if (!userData.inventory.icons) userData.inventory.icons = ['fa-user-astronaut'];
+            if (!userData.inventory.emotions) userData.inventory.emotions = ['😊', '😢', '😠', '😐'];
+            if (!userData.inventory.pets) userData.inventory.pets = ['🐷'];
+
+            if(type === 'theme') userData.inventory.themes.push(itemId);
+            if(type === 'icon') userData.inventory.icons.push(itemId);
+            if(type === 'emotion') userData.inventory.emotions.push(itemId); // Salva o ID (ex: 😎)
+            if(type === 'pet') userData.inventory.pets.push(itemId);
+
+            userData.transactions.unshift({
+                id: Date.now(), type: 'spend', amount: price, description: `Loja: ${itemName}`, date: new Date().toLocaleDateString()
+            });
+
+            // Salva no Banco
+            const session = JSON.parse(localStorage.getItem('fin_session'));
+            await supabase.from('child_profiles').update({ data: userData }).eq('user_id', session.uid);
+            
+            document.getElementById('user-coins').innerText = userData.coins;
+            renderItems();
+            
+            showModal("Compra Realizada! 🎉", `Você comprou "${itemName}"! Vá em 'Personalizar' no seu painel para usar.`, "🎁", [
+                { text: "Legal!", class: "bg-purple-500 text-white hover:bg-purple-600", close: true }
+            ]);
+        };
+
+        init();
+    </script>
+</body>
+</html>
