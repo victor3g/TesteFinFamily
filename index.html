@@ -4,34 +4,74 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bem-vindo ao Fin Family</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Itim -->
-    <link href="https://fonts.googleapis.com/css2?family=Itim&display=swap" rel="stylesheet">
-    <!-- Font Awesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Fredoka', 'sans-serif'] },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'bounce-slow': 'bounce 3s infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'blob': 'blob 7s infinite',
+                        'slide-in': 'slideIn 0.5s ease-out forwards'
+                    },
+                    keyframes: {
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-20px)' } },
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' }
+                        },
+                        slideIn: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        .font-itim { font-family: 'Itim', cursive; }
+        body { overflow: hidden; }
         
-        .app-gradient {
-            background: linear-gradient(180deg, #99BFFB 0%, #C7F8DC 100%);
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
+        /* Background Animado */
+        .bg-gradient-animate {
+            background: linear-gradient(-45deg, #60A5FA, #A78BFA, #34D399, #60A5FA);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
-        /* Estilo Soft Card (Neumorphism) */
-        .soft-card {
-            background-color: rgba(255, 255, 255, 0.95);
-            border-radius: 2rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        .bg-polka {
+            background-image: radial-gradient(rgba(255, 255, 255, 0.2) 2px, transparent 2px);
+            background-size: 30px 30px;
         }
 
-        /* Container dos Slides */
+        /* Glassmorphism Card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 4px solid rgba(255, 255, 255, 0.6);
+            border-radius: 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        /* Slider */
         .slider-container {
             display: flex;
-            transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); /* Efeito elástico */
             height: 100%;
             width: 100%;
         }
@@ -43,10 +83,10 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 1.5rem;
+            padding: 2rem;
             opacity: 0;
             transform: scale(0.9);
-            transition: opacity 0.5s ease, transform 0.5s ease;
+            transition: all 0.5s ease;
         }
 
         .slide.active {
@@ -54,210 +94,153 @@
             transform: scale(1);
         }
 
-        /* Animações */
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-15px); }
+        .slide.active .slide-content > * {
+            animation: slide-in 0.6s ease-out forwards;
         }
-        .animate-float { animation: float 3s ease-in-out infinite; }
+        .slide.active .slide-content > *:nth-child(1) { animation-delay: 0.1s; }
+        .slide.active .slide-content > *:nth-child(2) { animation-delay: 0.2s; }
+        .slide.active .slide-content > *:nth-child(3) { animation-delay: 0.3s; }
 
-        .slide-content > * {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.5s ease-out;
+        /* Botão 3D */
+        .btn-3d {
+            transition: all 0.1s;
+            box-shadow: 0 6px 0 0 rgba(0,0,0,0.2);
         }
-        .slide.active .slide-content > *:nth-child(1) { transition-delay: 0.1s; opacity: 1; transform: translateY(0); }
-        .slide.active .slide-content > *:nth-child(2) { transition-delay: 0.2s; opacity: 1; transform: translateY(0); }
-        .slide.active .slide-content > *:nth-child(3) { transition-delay: 0.3s; opacity: 1; transform: translateY(0); }
-        .slide.active .slide-content > *:nth-child(4) { transition-delay: 0.4s; opacity: 1; transform: translateY(0); }
+        .btn-3d:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 0 rgba(0,0,0,0.2);
+        }
 
-        /* Dots de Navegação */
+        /* Dots */
         .dot {
-            width: 8px;
-            height: 8px;
+            width: 10px; height: 10px;
             background-color: #CBD5E1;
             border-radius: 50%;
-            margin: 0 4px;
+            margin: 0 6px;
             transition: all 0.3s;
             cursor: pointer;
         }
         .dot.active {
-            background-color: #3B82F6;
-            width: 20px;
-            border-radius: 10px;
-        }
-
-        /* Botão Primário */
-        .btn-primary {
-            background-color: #9AC1FB;
-            color: #1F2937;
-            box-shadow: 0 4px 0 0 rgba(0,0,0,0.1);
-            transition: all 0.2s;
-        }
-        .btn-primary:active {
-            transform: translateY(2px);
-            box-shadow: none;
-        }
-        
-        /* Badges de Categoria */
-        .category-badge {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            padding: 4px 12px;
+            background-color: #7C3AED;
+            width: 30px;
             border-radius: 20px;
-            margin-bottom: 1rem;
-            display: inline-block;
-            font-weight: bold;
         }
     </style>
     
-    <!-- Script de Redirecionamento Automático (Opcional) -->
     <script>
-        // Se o usuário já viu o tutorial, redireciona para o app imediatamente
-        // Remova ou comente estas linhas se quiser que o tutorial apareça sempre
+        // Verifica se já viu o tutorial
         if (localStorage.getItem('fin_family_tutorial_seen') === 'true') {
-            window.location.replace('app.html');
+            window.location.replace('fluxo-login.html');
         }
     </script>
 </head>
-<body class="app-gradient flex flex-col items-center justify-center relative transition-opacity duration-500 opacity-0" onload="document.body.style.opacity='1'">
+<body class="bg-gradient-animate h-screen w-screen flex flex-col items-center justify-center relative">
+    
+    <div class="absolute inset-0 bg-polka pointer-events-none"></div>
 
-    <!-- Botão Pular -->
-    <button onclick="finishTutorial()" class="absolute top-6 right-6 font-itim text-gray-600 hover:text-blue-600 z-50 text-lg transition-colors bg-white/50 px-4 py-1 rounded-full backdrop-blur-sm shadow-sm">
-        Pular <i class="fa-solid fa-forward ml-1"></i>
+    <div class="absolute top-0 -left-4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+    <div class="absolute top-0 -right-4 w-72 h-72 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+    <div class="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+
+    <button onclick="finishTutorial()" class="absolute top-8 right-8 z-50 bg-white/40 hover:bg-white/60 text-white font-bold py-2 px-5 rounded-full backdrop-blur-md border-2 border-white/50 transition-all hover:scale-105 shadow-lg text-sm">
+        Pular <i class="fa-solid fa-forward ml-2"></i>
     </button>
 
-    <!-- Área Principal do Slide -->
-    <div class="w-full max-w-md h-[85vh] soft-card relative overflow-hidden flex flex-col mx-4 my-4">
+    <div class="w-full max-w-md h-[80vh] glass-card relative overflow-hidden flex flex-col mx-4 z-10">
         
         <div class="slider-container" id="slider">
             
-            <!-- Slide 1: Introdução -->
             <div class="slide active">
-                <div class="slide-content text-center flex flex-col items-center">
-                    <div class="w-40 h-40 bg-blue-100 rounded-full flex items-center justify-center mb-6 animate-float shadow-inner border-4 border-white">
-                        <span class="text-8xl">🐷</span>
+                <div class="slide-content text-center flex flex-col items-center w-full">
+                    <div class="w-48 h-48 bg-gradient-to-tr from-blue-200 to-purple-200 rounded-full flex items-center justify-center mb-8 animate-float shadow-xl border-4 border-white">
+                        <span class="text-9xl drop-shadow-md">🐷</span>
                     </div>
-                    <h2 class="text-4xl font-itim text-gray-800 mb-2 font-bold">Fin Family</h2>
-                    <p class="text-lg font-itim text-gray-500 font-bold mb-4">Educação Financeira Divertida</p>
-                    <p class="text-lg font-itim text-gray-600 leading-relaxed px-2">
-                        Um jeito mágico para pais ensinarem e crianças aprenderem a valorizar cada moedinha!
+                    <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Fin Family</h1>
+                    <p class="text-xl text-purple-600 font-bold mb-4">Educação Mágica ✨</p>
+                    <p class="text-gray-600 text-lg leading-relaxed px-2">
+                        Um cofrinho digital inteligente para você aprender a ganhar, poupar e realizar seus sonhos!
                     </p>
                 </div>
             </div>
 
-            <!-- Slide 2: Pais - Configuração (Passo 1) -->
-            <div class="slide">
-                <div class="slide-content text-center flex flex-col items-center">
-                    <span class="category-badge bg-blue-100 text-blue-600 font-itim">Passo 1: Pais</span>
-                    <div class="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-6 shadow-md relative">
-                        <i class="fa-solid fa-user-plus text-5xl text-blue-500"></i>
-                        <div class="absolute -bottom-2 -right-2 bg-yellow-400 w-12 h-12 rounded-full flex items-center justify-center border-4 border-white text-lg font-bold font-itim text-white">1234</div>
-                    </div>
-                    <h2 class="text-2xl font-itim text-gray-800 mb-4 font-bold">Crie Perfis & Códigos</h2>
-                    <p class="text-base font-itim text-gray-600 leading-relaxed px-2">
-                        No painel do Responsável, adicione seus filhos. O sistema gera um <strong>Código de 4 Dígitos</strong> único para cada um.
-                        <br><br>
-                        <span class="text-sm bg-yellow-100 p-1 rounded text-yellow-800 font-bold">É com este código que a criança entra no app!</span>
-                    </p>
-                </div>
-            </div>
-
-            <!-- Slide 3: Pais - Gestão (Passo 2) -->
-            <div class="slide">
-                <div class="slide-content text-center flex flex-col items-center">
-                    <span class="category-badge bg-blue-100 text-blue-600 font-itim">Passo 2: Pais</span>
-                    <div class="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-6 shadow-md">
-                        <i class="fa-solid fa-list-check text-5xl text-purple-500"></i>
-                    </div>
-                    <h2 class="text-2xl font-itim text-gray-800 mb-4 font-bold">O "Banco" é Você</h2>
-                    <ul class="text-left font-itim text-gray-600 space-y-3 px-4 w-full">
-                        <li class="flex items-center"><i class="fa-solid fa-check-circle text-green-500 mr-3"></i> Crie tarefas (ex: "Arrumar quarto").</li>
-                        <li class="flex items-center"><i class="fa-solid fa-coins text-yellow-500 mr-3"></i> Envie mesadas ou bônus.</li>
-                        <li class="flex items-center"><i class="fa-solid fa-eye text-blue-500 mr-3"></i> Monitore o saldo e as metas.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Slide 4: Crianças - Ganhar (Aventura) -->
-            <div class="slide">
-                <div class="slide-content text-center flex flex-col items-center">
-                    <span class="category-badge bg-green-100 text-green-600 font-itim">Aventura: Crianças</span>
-                    <div class="w-32 h-32 bg-green-50 rounded-full flex items-center justify-center mb-6 shadow-md border-4 border-green-200">
-                        <i class="fa-solid fa-gamepad text-5xl text-green-500 animate-pulse"></i>
-                    </div>
-                    <h2 class="text-2xl font-itim text-gray-800 mb-4 font-bold">Ganhe Moedas!</h2>
-                    <p class="text-base font-itim text-gray-600 leading-relaxed px-2 mb-4">
-                        Existem duas formas de encher o cofrinho:
-                    </p>
-                    <div class="grid grid-cols-2 gap-3 w-full px-2">
-                        <div class="bg-gray-50 p-2 rounded-lg text-sm font-itim"><i class="fa-solid fa-broom text-purple-500"></i><br>Tarefas Reais</div>
-                        <div class="bg-gray-50 p-2 rounded-lg text-sm font-itim"><i class="fa-solid fa-ghost text-orange-500"></i><br>Jogos no App</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 5: Crianças - Poupar (Magia) -->
-            <div class="slide">
-                <div class="slide-content text-center flex flex-col items-center">
-                    <span class="category-badge bg-yellow-100 text-yellow-700 font-itim">Magia: Poupança</span>
-                    <div class="w-32 h-32 bg-yellow-50 rounded-full flex items-center justify-center mb-6 shadow-md border-4 border-yellow-200">
-                        <i class="fa-solid fa-seedling text-5xl text-green-600"></i>
-                    </div>
-                    <h2 class="text-2xl font-itim text-gray-800 mb-4 font-bold">Juros Mágicos</h2>
-                    <p class="text-base font-itim text-gray-600 leading-relaxed px-2">
-                        Defina um sonho (ex: Bicicleta 🚲). Ao guardar moedas na meta, elas crescem sozinhas com o tempo!
-                        <br><br>
-                        <strong>Quanto mais você guarda, mais você ganha!</strong>
-                    </p>
-                </div>
-            </div>
-
-            <!-- Slide 6: Crianças - Diversão (Loja) -->
-            <div class="slide">
-                <div class="slide-content text-center flex flex-col items-center">
-                    <span class="category-badge bg-purple-100 text-purple-600 font-itim">Diversão: Loja</span>
-                    <div class="w-32 h-32 bg-purple-50 rounded-full flex items-center justify-center mb-6 shadow-md border-4 border-purple-200">
-                        <i class="fa-solid fa-store text-5xl text-purple-500"></i>
-                    </div>
-                    <h2 class="text-2xl font-itim text-gray-800 mb-4 font-bold">Seu App, Seu Estilo</h2>
-                    <p class="text-base font-itim text-gray-600 leading-relaxed px-2">
-                        Use suas moedas livres na <strong>Loja Mágica</strong> para comprar novos mascotes, temas coloridos e ícones incríveis.
-                    </p>
-                </div>
-            </div>
-
-            <!-- Slide 7: Começar -->
             <div class="slide">
                 <div class="slide-content text-center flex flex-col items-center w-full">
-                    <div class="w-40 h-40 bg-gradient-to-br from-blue-400 to-green-400 rounded-full flex items-center justify-center mb-8 animate-float shadow-lg border-4 border-white">
-                        <i class="fa-solid fa-rocket text-6xl text-white"></i>
+                    <div class="bg-blue-100 text-blue-600 font-bold px-4 py-1 rounded-full mb-6 uppercase text-xs tracking-wider shadow-sm">Para os Pais 🛡️</div>
+                    <div class="w-40 h-40 bg-white rounded-3xl flex items-center justify-center mb-6 shadow-lg border-b-8 border-blue-200 rotate-3">
+                        <i class="fa-solid fa-users-gear text-7xl text-blue-500"></i>
                     </div>
-                    <h2 class="text-4xl font-itim text-gray-800 mb-4 font-bold">Vamos lá?</h2>
-                    <p class="text-lg font-itim text-gray-500 mb-8 px-4">
-                        Sua jornada financeira começa agora.
+                    <h2 class="text-3xl font-bold text-gray-800 mb-3">Você é o Banco</h2>
+                    <p class="text-gray-600 leading-relaxed px-2">
+                        Crie contas para seus filhos, envie mesadas e <strong>aprove</strong> as tarefas e metas que eles criarem.
+                    </p>
+                    <div class="mt-4 flex items-center justify-center gap-2 text-sm font-bold text-gray-500 bg-gray-100 px-4 py-2 rounded-lg">
+                        <i class="fa-solid fa-lock text-green-500"></i> Controle Total
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide">
+                <div class="slide-content text-center flex flex-col items-center w-full">
+                    <div class="bg-green-100 text-green-600 font-bold px-4 py-1 rounded-full mb-6 uppercase text-xs tracking-wider shadow-sm">Aventura 🚀</div>
+                    <div class="relative mb-8">
+                        <div class="w-40 h-40 bg-green-50 rounded-full flex items-center justify-center border-4 border-green-200 shadow-inner">
+                            <i class="fa-solid fa-sack-dollar text-7xl text-green-500 animate-bounce"></i>
+                        </div>
+                        <div class="absolute -right-4 top-0 bg-yellow-400 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl border-4 border-white shadow-md">
+                            +10
+                        </div>
+                    </div>
+                    <h2 class="text-3xl font-bold text-gray-800 mb-3">Missões e Jogos</h2>
+                    <p class="text-gray-600 leading-relaxed px-2 mb-4">
+                        Ganhe moedas fazendo tarefas reais (como arrumar o quarto) ou jogando o mini-game <strong>Saltitante</strong>!
+                    </p>
+                </div>
+            </div>
+
+            <div class="slide">
+                <div class="slide-content text-center flex flex-col items-center w-full">
+                    <div class="bg-purple-100 text-purple-600 font-bold px-4 py-1 rounded-full mb-6 uppercase text-xs tracking-wider shadow-sm">Diversão 🎨</div>
+                    <div class="flex gap-4 mb-8">
+                        <div class="w-24 h-24 bg-white rounded-2xl flex flex-col items-center justify-center shadow-md border-b-4 border-purple-200">
+                            <span class="text-4xl mb-1">🚲</span>
+                            <span class="text-xs font-bold text-gray-400">Sonhos</span>
+                        </div>
+                        <div class="w-24 h-24 bg-white rounded-2xl flex flex-col items-center justify-center shadow-md border-b-4 border-pink-200">
+                            <span class="text-4xl mb-1">🤠</span>
+                            <span class="text-xs font-bold text-gray-400">Estilo</span>
+                        </div>
+                    </div>
+                    <h2 class="text-3xl font-bold text-gray-800 mb-3">Seu Jeito</h2>
+                    <p class="text-gray-600 leading-relaxed px-2">
+                        Crie metas de poupança para seus sonhos e use suas moedas na <strong>Loja Mágica</strong> para personalizar o app e o mascote!
+                    </p>
+                </div>
+            </div>
+
+            <div class="slide">
+                <div class="slide-content text-center flex flex-col items-center w-full h-full justify-center">
+                    <div class="w-48 h-48 bg-gradient-to-br from-yellow-300 to-orange-400 rounded-full flex items-center justify-center mb-8 animate-pulse-slow shadow-2xl border-4 border-white">
+                        <i class="fa-solid fa-rocket text-8xl text-white transform -rotate-12"></i>
+                    </div>
+                    <h2 class="text-4xl font-extrabold text-gray-800 mb-4">Vamos Começar?</h2>
+                    <p class="text-gray-600 mb-10 px-6 text-lg">
+                        Sua jornada para se tornar um mestre das moedas começa agora!
                     </p>
                     
-                    <button onclick="finishTutorial()" class="w-full max-w-xs btn-primary py-4 rounded-xl font-itim text-2xl font-bold hover:bg-blue-300 transition-colors flex items-center justify-center group shadow-md border-2 border-white">
-                        Entrar no App
-                        <i class="fa-solid fa-arrow-right ml-3 transition-transform group-hover:translate-x-1"></i>
+                    <button onclick="finishTutorial()" class="w-full max-w-xs bg-gradient-to-r from-blue-500 to-purple-600 text-white py-4 rounded-2xl font-bold text-2xl shadow-xl btn-3d flex items-center justify-center group hover:scale-105 transition-transform">
+                        Criar Conta
+                        <i class="fa-solid fa-circle-arrow-right ml-3 text-3xl group-hover:translate-x-2 transition-transform"></i>
                     </button>
                 </div>
             </div>
 
         </div>
 
-        <!-- Controles Inferiores -->
-        <div class="absolute bottom-4 left-0 right-0 px-6 flex justify-between items-center z-20 h-16">
-            <!-- Dots Indicator -->
-            <div class="flex flex-wrap justify-center w-2/3" id="dots-container">
-                <!-- Dots gerados via JS -->
-            </div>
+        <div class="absolute bottom-0 left-0 right-0 h-24 flex items-center justify-between px-8 bg-gradient-to-t from-white/80 to-transparent z-20">
+            <div class="flex gap-2" id="dots-container"></div>
 
-            <!-- Botão Próximo -->
-            <button id="next-btn" class="w-12 h-12 bg-gray-800 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-black transition-transform active:scale-95 flex-shrink-0 ml-2">
-                <i class="fa-solid fa-chevron-right text-lg"></i>
+            <button id="next-btn" class="w-14 h-14 bg-gray-900 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-black transition-all active:scale-90 btn-3d">
+                <i class="fa-solid fa-arrow-right text-xl"></i>
             </button>
         </div>
 
@@ -272,7 +255,7 @@
         let currentIndex = 0;
         const totalSlides = slides.length;
 
-        // Gerar Dots dinamicamente
+        // Gerar Dots
         slides.forEach((_, index) => {
             const dot = document.createElement('div');
             dot.classList.add('dot');
@@ -289,6 +272,7 @@
         function updateSlider() {
             slider.style.transform = `translateX(-${currentIndex * 100}%)`;
 
+            // Ativa classes para animação
             slides.forEach((slide, index) => {
                 slide.classList.toggle('active', index === currentIndex);
             });
@@ -297,7 +281,7 @@
                 dot.classList.toggle('active', index === currentIndex);
             });
 
-            // Esconder botão 'Próximo' no último slide
+            // Gerenciar visibilidade do botão Próximo
             if (currentIndex === totalSlides - 1) {
                 nextBtn.style.opacity = '0';
                 nextBtn.style.pointerEvents = 'none';
@@ -307,38 +291,32 @@
             }
         }
 
-        function nextSlide() {
+        nextBtn.addEventListener('click', () => {
             if (currentIndex < totalSlides - 1) {
                 currentIndex++;
                 updateSlider();
             }
-        }
+        });
 
-        nextBtn.addEventListener('click', nextSlide);
-
-        // --- Swipe Logic (Mobile) ---
+        // Swipe Logic (Touch) para celular
         let touchStartX = 0;
         let touchEndX = 0;
-        const sliderArea = document.querySelector('.soft-card');
+        const sliderArea = document.querySelector('.glass-card');
 
-        sliderArea.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-        }, {passive: true});
-
+        sliderArea.addEventListener('touchstart', (e) => touchStartX = e.changedTouches[0].screenX, {passive: true});
         sliderArea.addEventListener('touchend', (e) => {
             touchEndX = e.changedTouches[0].screenX;
             handleSwipe();
         }, {passive: true});
 
         function handleSwipe() {
-            const threshold = 50;
-            if (touchStartX - touchEndX > threshold) {
+            if (touchStartX - touchEndX > 50) { // Swipe Left
                 if (currentIndex < totalSlides - 1) {
                     currentIndex++;
                     updateSlider();
                 }
             }
-            if (touchEndX - touchStartX > threshold) {
+            if (touchEndX - touchStartX > 50) { // Swipe Right
                 if (currentIndex > 0) {
                     currentIndex--;
                     updateSlider();
@@ -346,22 +324,20 @@
             }
         }
 
-        // --- FUNÇÃO DE REDIRECIONAMENTO LIMPO ---
+        // Finalizar Tutorial
         function finishTutorial() {
-            // Marca no navegador que o tutorial foi visto
             localStorage.setItem('fin_family_tutorial_seen', 'true');
-            
-            // Efeito visual de saída (Fade out)
+            // Efeito visual de saída
+            document.body.style.transition = 'opacity 0.5s';
             document.body.style.opacity = '0';
             
-            // Aguarda 500ms para a animação de fade out terminar antes de redirecionar
             setTimeout(() => {
-                window.location.href = 'app.html';
+                window.location.href = 'fluxo-login.html';
             }, 500);
         }
-
-        // Inicializar
-        updateSlider();
+        
+        // Inicializa animação do primeiro slide
+        setTimeout(() => slides[0].classList.add('active'), 100);
     </script>
 </body>
 </html>

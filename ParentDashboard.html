@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Fin Family - Responsável</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Fredoka', 'sans-serif'] },
+                    animation: { 'fade-in-up': 'fadeInUp 0.4s ease-out forwards' },
+                    keyframes: { fadeInUp: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } },
+                    boxShadow: { 'soft-blue': '0 20px 40px -15px rgba(59, 130, 246, 0.3)', 'card-glow': '0 30px 60px -15px rgba(59, 130, 246, 0.25), 0 0 20px rgba(255,255,255,0.8) inset' }
+                }
+            }
+        }
+    </script>
+    <style> 
+        body { font-family: 'Fredoka', sans-serif; } 
+        .soft-input { border: 2px solid #E2E8F0; transition: 0.3s; } 
+        .soft-input:focus { border-color: #60A5FA; outline: none; } 
+        .tutorial-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: transparent; z-index: 999; pointer-events: auto; }
+        .tutorial-highlight { position: fixed; z-index: 1000; background: transparent; box-shadow: 0 0 0 9999px rgba(0,0,0,0.75), 0 0 15px rgba(255,255,255,0.5); border-radius: 16px; pointer-events: none; transition: all 0.3s ease; border: 2px solid rgba(255,255,255,0.8); }
+        .tutorial-tooltip { position: fixed; z-index: 1001; background: white; padding: 20px; border-radius: 20px; width: 280px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3); animation: fadeInUp 0.4s ease; }
+    </style>
+</head>
+<body class="bg-blue-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const supabase = window.supabase.createClient("https://jwwgsyibgwpvgfbsltzr.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3d2dzeWliZ3dwdmdmYnNsdHpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNzkzMDAsImV4cCI6MjA3ODk1NTMwMH0.9iA_dKu4UJf-tQV03YdG8J1N4FhuP_flxHr7HWDbt9I");
+
+        const DEFAULT_CHILD_DATA = { name: "Criança", coins: 0, tasks: [], transactions: [], notifications: [], progress: { goals: [] }, profileIcon: { type: 'fa-icon', value: 'fa-user-astronaut' }, currentEmotion: { value: '😊' }, settings: { parentApprovalRequired: true } };
+
+        const Modal = ({ title, onClose, children }) => (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in-up">
+                <div className="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl relative border-4 border-white max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-2xl font-bold text-gray-800">{title}</h3>
+                        <button onClick={onClose} className="text-gray-400 hover:text-red-500 text-xl"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                    {children}
+                </div>
+            </div>
+        );
+
+        const Tutorial = ({ steps, onClose }) => {
+            const [currentStep, setCurrentStep] = useState(0);
+            const [style, setStyle] = useState({});
+            const [tooltipStyle, setTooltipStyle] = useState({});
+
+            useEffect(() => {
+                const updatePos = () => {
+                    const step = steps[currentStep];
+                    if (!step) return;
+                    const el = document.querySelector(step.target);
+                    if (el) {
+                        const rect = el.getBoundingClientRect();
+                        setStyle({ top: rect.top - 5, left: rect.left - 5, width: rect.width + 10, height: rect.height + 10 });
+                        let top = rect.bottom + 20; let left = rect.left + (rect.width/2) - 140;
+                        if(left < 10) left = 10; if(left + 280 > window.innerWidth) left = window.innerWidth - 290; if(top + 180 > window.innerHeight) top = rect.top - 200;
+                        setTooltipStyle({ top, left });
+                    } else {
+                        setStyle({ display: 'none' }); setTooltipStyle({ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' });
+                    }
+                };
+                setTimeout(updatePos, 100);
+                window.addEventListener('resize', updatePos); window.addEventListener('scroll', updatePos);
+                return () => { window.removeEventListener('resize', updatePos); window.removeEventListener('scroll', updatePos); };
+            }, [currentStep, steps]);
+
+            const next = () => currentStep < steps.length - 1 ? setCurrentStep(currentStep + 1) : onClose();
+            
+            return (
+                <div className="tutorial-overlay">
+                    <div className="tutorial-highlight" style={style}></div>
+                    <div className="tutorial-tooltip" style={tooltipStyle}>
+                        <div className="text-4xl mb-2">{steps[currentStep].emoji}</div>
+                        <h4 className="text-xl font-bold text-gray-800 mb-2">{steps[currentStep].title}</h4>
+                        <p className="text-gray-600 text-sm mb-4 leading-relaxed">{steps[currentStep].content}</p>
+                        <div className="flex justify-between items-center"><span className="text-xs text-gray-400 font-bold">{currentStep + 1} / {steps.length}</span><button onClick={next} className="bg-blue-500 text-white px-6 py-2 rounded-xl font-bold shadow-md hover:bg-blue-600 transition-colors">{currentStep === steps.length - 1 ? 'Entendi! 👍' : 'Próximo ➡'}</button></div>
+                    </div>
+                </div>
+            );
+        };
+
+        function ParentDashboard() {
+            const [parentData, setParentData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [view, setView] = useState('list'); 
+            const [selectedChild, setSelectedChild] = useState(null); 
+            
+            // Modais e Estados de Edição
+            const [modalOpen, setModalOpen] = useState(false);
+            const [modalType, setModalType] = useState(null);
+            const [editingGoal, setEditingGoal] = useState(null);
+            const [deletingGoal, setDeletingGoal] = useState(null);
+            const [rewardingGoal, setRewardingGoal] = useState(null);
+            
+            // Novos Estados para Nome/Exclusão
+            const [editingNameTarget, setEditingNameTarget] = useState(null); // 'parent' ou childId
+            const [nameInput, setNameInput] = useState('');
+            const [childToDelete, setChildToDelete] = useState(null);
+
+            const [showTutorial, setShowTutorial] = useState(false);
+            
+            useEffect(() => {
+                let subscription;
+                const init = async () => {
+                    const session = localStorage.getItem('fin_session');
+                    if (!session || JSON.parse(session).role !== 'parent') { window.location.href = 'fluxo-login.html'; return; }
+                    const sessionData = JSON.parse(session);
+                    
+                    const { data } = await supabase.from('parent_control').select('data').eq('user_id', sessionData.uid).single();
+                    setParentData(data ? data.data : { name: "Responsável", children: [] });
+                    setLoading(false);
+
+                    if (!localStorage.getItem('parent_tutorial_seen')) {
+                        setTimeout(() => setShowTutorial(true), 1500);
+                    }
+
+                    subscription = supabase.channel('parent_dashboard_sync').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'parent_control', filter: `user_id=eq.${sessionData.uid}` }, (payload) => { if(payload.new && payload.new.data) { setParentData(payload.new.data); } }).subscribe();
+                };
+                init();
+                return () => { if (subscription) supabase.removeChannel(subscription); };
+            }, []);
+
+            const updateParentData = async (newData) => {
+                const session = JSON.parse(localStorage.getItem('fin_session'));
+                await supabase.from('parent_control').upsert({ user_id: session.uid, data: newData });
+                setParentData(newData);
+            };
+
+            // --- LÓGICA DE NOME E EXCLUSÃO ---
+
+            const handleOpenEditParentName = () => {
+                setEditingNameTarget('parent');
+                setNameInput(parentData.name);
+                setModalType('edit-name');
+                setModalOpen(true);
+            };
+
+            const handleOpenEditChildName = (e, child) => {
+                e.stopPropagation();
+                setEditingNameTarget(child.uid);
+                setNameInput(child.name);
+                setModalType('edit-name');
+                setModalOpen(true);
+            };
+
+            const handleSaveName = async (e) => {
+                e.preventDefault();
+                if (!nameInput.trim()) return alert("Nome inválido");
+
+                if (editingNameTarget === 'parent') {
+                    const newData = { ...parentData, name: nameInput };
+                    await updateParentData(newData);
+                } else {
+                    // Atualiza lista do pai
+                    const updatedChildren = parentData.children.map(c => c.uid === editingNameTarget ? { ...c, name: nameInput } : c);
+                    await updateParentData({ ...parentData, children: updatedChildren });
+
+                    // Atualiza perfil da criança (sincronia)
+                    const { data: currentChild } = await supabase.from('child_profiles').select('data').eq('user_id', editingNameTarget).single();
+                    if (currentChild) {
+                        await supabase.from('child_profiles').update({ data: { ...currentChild.data, name: nameInput } }).eq('user_id', editingNameTarget);
+                    }
+                }
+                setModalOpen(false);
+            };
+
+            const handleOpenDeleteChild = (e, child) => {
+                e.stopPropagation();
+                setChildToDelete(child);
+                setModalType('delete-child-confirm');
+                setModalOpen(true);
+            };
+
+            const executeDeleteChild = async () => {
+                if (!childToDelete) return;
+                
+                // 1. Remove da lista do pai
+                const updatedChildren = parentData.children.filter(c => c.uid !== childToDelete.uid);
+                await updateParentData({ ...parentData, children: updatedChildren });
+
+                // 2. Apaga o registro da criança
+                await supabase.from('child_profiles').delete().eq('user_id', childToDelete.uid);
+
+                setModalOpen(false);
+                setChildToDelete(null);
+            };
+
+            // --- FIM DA LÓGICA NOVA ---
+
+            const loadChildDetails = async (childUid) => {
+                setLoading(true);
+                const { data } = await supabase.from('child_profiles').select('data').eq('user_id', childUid).single();
+                if (data) {
+                    const mergedData = { ...DEFAULT_CHILD_DATA, ...data.data, uid: childUid };
+                    if (!mergedData.progress.goals) mergedData.progress.goals = [];
+                    if (!mergedData.notifications) mergedData.notifications = [];
+                    setSelectedChild(mergedData);
+                    setView('child-detail');
+                    if (!localStorage.getItem('parent_detail_tutorial_seen')) { setTimeout(() => setShowTutorial(true), 1000); localStorage.setItem('parent_detail_tutorial_seen', 'true'); }
+                }
+                setLoading(false);
+            };
+
+            const updateChildData = async (updatedChild) => {
+                await supabase.from('child_profiles').update({ data: updatedChild }).eq('user_id', updatedChild.uid);
+                setSelectedChild(updatedChild);
+            };
+
+            const handleGoalUpdate = async (goalId, newAmount, newName, isApproved) => {
+                const updatedGoals = selectedChild.progress.goals.map(g => {
+                    if (g.id === goalId) { return { ...g, amount: Number(newAmount), name: newName, approved: isApproved }; }
+                    return g;
+                });
+                await updateChildData({ ...selectedChild, progress: { ...selectedChild.progress, goals: updatedGoals } });
+                setModalOpen(false);
+            };
+
+            const handleApproveGoal = async (goalId) => {
+                const updatedGoals = selectedChild.progress.goals.map(g => {
+                    if (g.id === goalId) { return { ...g, approved: true }; }
+                    return g;
+                });
+                await updateChildData({ ...selectedChild, progress: { ...selectedChild.progress, goals: updatedGoals } });
+            };
+
+            const handleOpenDeleteModal = (goal) => {
+                setDeletingGoal(goal);
+                setModalType('delete-confirmation');
+                setModalOpen(true);
+            };
+
+            const handleOpenRewardModal = (goal) => {
+                setRewardingGoal(goal);
+                setModalType('reward-confirmation');
+                setModalOpen(true);
+            };
+
+            const handleDeleteGoal = async () => {
+                if (!deletingGoal) return;
+                const goalId = deletingGoal.id;
+                const refund = deletingGoal.saved;
+                const newGoals = selectedChild.progress.goals.filter(g => g.id !== goalId);
+                let newTransactions = selectedChild.transactions;
+                if(refund > 0) {
+                    newTransactions = [
+                        { id: Date.now(), type: 'earn', amount: refund, description: `Estorno Meta Excluída: ${deletingGoal.name}`, date: new Date().toLocaleDateString() }, 
+                        ...selectedChild.transactions
+                    ];
+                }
+                await updateChildData({ ...selectedChild, coins: selectedChild.coins + refund, progress: { ...selectedChild.progress, goals: newGoals }, transactions: newTransactions });
+                setModalOpen(false);
+                setDeletingGoal(null);
+            };
+
+            const handleGrantReward = async () => {
+                if (!rewardingGoal) return;
+                const newGoals = selectedChild.progress.goals.filter(g => g.id !== rewardingGoal.id);
+                const newTransactions = [
+                    { id: Date.now(), type: 'spend', amount: 0, description: `Meta Concluída: ${rewardingGoal.name} (Recompensa Entregue)`, date: new Date().toLocaleDateString() }, 
+                    ...selectedChild.transactions
+                ];
+                const newNotifications = [
+                    { id: Date.now(), title: "Recompensa Entregue! 🎁", message: `Seu responsável confirmou a entrega da recompensa da meta: "${rewardingGoal.name}". Parabéns!`, type: "success" },
+                    ...(selectedChild.notifications || [])
+                ];
+                await updateChildData({ ...selectedChild, progress: { ...selectedChild.progress, goals: newGoals }, transactions: newTransactions, notifications: newNotifications });
+                setModalOpen(false); setRewardingGoal(null);
+            };
+
+            const handleGiveMoney = async (amount, reason) => {
+                if (amount <= 0) return alert("Valor inválido.");
+                const newCoins = selectedChild.coins + Number(amount);
+                const newTransaction = { id: Date.now(), type: 'earn', amount: Number(amount), description: reason || "Mesada/Bônus", date: new Date().toLocaleDateString() };
+                await updateChildData({ ...selectedChild, coins: newCoins, transactions: [newTransaction, ...selectedChild.transactions] });
+                setModalOpen(false);
+                alert(`Enviado ${amount} moedas!`);
+            };
+
+            const handleAddTask = async (taskText, rewardAmount) => {
+                if (!taskText) return alert("Digite a descrição.");
+                const newTask = { id: Date.now().toString(), text: taskText, reward: Number(rewardAmount), completed: false, approved: false };
+                await updateChildData({ ...selectedChild, tasks: [...selectedChild.tasks, newTask] });
+                setModalOpen(false);
+                alert("Tarefa criada!");
+            };
+
+            const handleApproveTask = async (taskId) => {
+                const task = selectedChild.tasks.find(t => t.id === taskId);
+                if (!task) return;
+                if (!task.completed) task.completed = true;
+                task.approved = true;
+                const newCoins = selectedChild.coins + (task.reward || 0);
+                const newTransaction = { id: Date.now(), type: 'earn', amount: task.reward || 0, description: `Tarefa Aprovada: ${task.text}`, date: new Date().toLocaleDateString() };
+                const updatedTasks = selectedChild.tasks.map(t => t.id === taskId ? task : t);
+                await updateChildData({ ...selectedChild, coins: newCoins, tasks: updatedTasks, transactions: [newTransaction, ...selectedChild.transactions] });
+            };
+            
+            const handleDeleteTask = async (taskId) => {
+                const updatedTasks = selectedChild.tasks.filter(t => t.id !== taskId);
+                await updateChildData({ ...selectedChild, tasks: updatedTasks });
+            };
+
+            const addChild = async () => {
+                const name = prompt("Nome da criança:");
+                if (!name) return;
+                const uid = JSON.parse(localStorage.getItem('fin_session')).uid;
+                const newUid = crypto.randomUUID();
+                const newCode = Math.floor(1000 + Math.random() * 9000).toString();
+                await supabase.from('child_profiles').insert([{ user_id: newUid, parent_id: uid, data: { ...DEFAULT_CHILD_DATA, name } }]);
+                const updated = { ...parentData, children: [...parentData.children, { uid: newUid, name, code: newCode, profileIcon: { type: 'fa-icon', value: 'fa-user-astronaut' } }] };
+                await updateParentData(updated);
+                alert(`Código: ${newCode}`);
+            };
+
+            const renderProfileIcon = (iconData, sizeClass = "text-2xl") => {
+                if (!iconData) return <i className={`fa-solid fa-user ${sizeClass}`}></i>;
+                if (iconData.type === 'image-data') return <img src={iconData.value} className="w-full h-full object-cover rounded-full aspect-square" alt="Perfil" />;
+                if (iconData.type === 'emoji') return <span className={sizeClass}>{iconData.value}</span>;
+                return <i className={`fa-solid ${iconData.value} ${sizeClass}`}></i>;
+            };
+
+            const TUTORIAL_STEPS = view === 'list' ? [
+                { target: null, title: "Bem-vindo ao Fin Family! 👋", content: "Aqui você é o 'Gerente do Banco'. Vamos configurar a conta da sua família?", emoji: "👔" },
+                { target: "#add-child-btn", title: "1. Adicionar Filhos 👶", content: "Clique aqui para criar um perfil. Cada criança terá um código de acesso único de 4 números.", emoji: "➕" },
+                { target: "#help-btn", title: "Precisa de ajuda? ❓", content: "Acesse este tutorial novamente a qualquer momento clicando aqui.", emoji: "💡" }
+            ] : [
+                { target: null, title: "Gestão Detalhada 📊", content: "Agora você está no painel da criança. Aqui você controla saldo, tarefas e aprovações.", emoji: "⚙️" },
+                { target: "#btn-give-money", title: "Dar Mesada/Bônus 💰", content: "Envie moedas instantaneamente para o saldo da criança (ex: semanada, presente).", emoji: "💸" },
+                { target: "#btn-add-task", title: "Criar Missões 📝", content: "Crie tarefas valendo recompensas. Quando a criança terminar, você aprova e o valor é liberado.", emoji: "✅" },
+                { target: "#pending-tasks-area", title: "Aprovações ⏳", content: "Tarefas feitas pela criança aparecem aqui. Aprove para pagar ou recuse se precisar refazer.", emoji: "👀" },
+                { target: "#goals-section", title: "Sonhos e Metas 🎯", content: "Acompanhe o progresso das metas que a criança criou.", emoji: "🚀" }
+            ];
+
+            if (loading) return <div className="flex h-screen items-center justify-center text-blue-500 font-bold">Carregando...</div>;
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-100 via-teal-50 to-indigo-100 p-4 relative overflow-hidden">
+                    {showTutorial && <Tutorial steps={TUTORIAL_STEPS} onClose={() => { setShowTutorial(false); localStorage.setItem('parent_tutorial_seen', 'true'); }} />}
+
+                    {/* MODAL: EDITAR NOME (PAI OU FILHO) */}
+                    {modalOpen && modalType === 'edit-name' && (
+                        <Modal title={editingNameTarget === 'parent' ? "Alterar meu nome" : "Alterar nome da criança"} onClose={() => setModalOpen(false)}>
+                            <form onSubmit={handleSaveName} className="space-y-4">
+                                <label className="block text-sm font-bold text-gray-600">Novo Nome</label>
+                                <input type="text" value={nameInput} onChange={(e) => setNameInput(e.target.value)} className="soft-input w-full p-3 rounded-lg text-lg" autoFocus required />
+                                <button type="submit" className="w-full bg-blue-500 text-white py-3 rounded-xl font-bold shadow-md hover:bg-blue-600">Salvar</button>
+                            </form>
+                        </Modal>
+                    )}
+
+                    {/* MODAL: CONFIRMAR EXCLUSÃO DE FILHO */}
+                    {modalOpen && modalType === 'delete-child-confirm' && childToDelete && (
+                        <Modal title="Excluir Perfil? ⚠️" onClose={() => setModalOpen(false)}>
+                            <div className="text-center space-y-4">
+                                <div className="text-6xl">🗑️</div>
+                                <p className="text-gray-600">Tem certeza que deseja excluir o perfil de <strong>{childToDelete.name}</strong>?</p>
+                                <div className="bg-red-50 p-3 rounded-lg text-sm text-red-800 text-left border border-red-200">
+                                    <i className="fa-solid fa-triangle-exclamation mr-2"></i>
+                                    <strong>Atenção:</strong> Essa ação é irreversível. Todas as moedas, tarefas e histórico serão apagados permanentemente.
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 mt-4">
+                                    <button onClick={() => setModalOpen(false)} className="bg-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-300">Cancelar</button>
+                                    <button onClick={executeDeleteChild} className="bg-red-500 text-white py-3 rounded-xl font-bold hover:bg-red-600 shadow-lg">Excluir</button>
+                                </div>
+                            </div>
+                        </Modal>
+                    )}
+
+                    {modalOpen && modalType === 'reward-confirmation' && rewardingGoal && (
+                        <Modal title="Entregar Recompensa? 🎁" onClose={() => setModalOpen(false)}>
+                            <div className="text-center space-y-4">
+                                <div className="text-6xl animate-bounce">🎉</div>
+                                <p className="text-gray-600 font-medium">A criança juntou todas as moedas para: <br/><strong>"{rewardingGoal.name}"</strong></p>
+                                <p className="text-sm text-gray-500 bg-green-50 p-3 rounded-lg border border-green-200">
+                                    Ao confirmar, a meta será removida do painel da criança e ela receberá uma notificação de sucesso.
+                                </p>
+                                <div className="grid grid-cols-2 gap-3 mt-4">
+                                    <button onClick={() => setModalOpen(false)} className="bg-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-300">Cancelar</button>
+                                    <button onClick={handleGrantReward} className="bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 shadow-lg">Confirmar Entrega</button>
+                                </div>
+                            </div>
+                        </Modal>
+                    )}
+
+                    {modalOpen && modalType === 'delete-confirmation' && deletingGoal && (
+                        <Modal title={deletingGoal.approved ? "Excluir Meta?" : "Recusar Meta?"} onClose={() => setModalOpen(false)}>
+                            <div className="text-center space-y-4">
+                                <div className="text-5xl">{deletingGoal.approved ? '🗑️' : '⛔'}</div>
+                                <p className="text-gray-600">
+                                    {deletingGoal.approved 
+                                        ? `Tem certeza que deseja excluir a meta "${deletingGoal.name}"?` 
+                                        : `Deseja recusar a meta "${deletingGoal.name}" criada pela criança?`
+                                    }
+                                </p>
+                                <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800 text-left">
+                                    <i className="fa-solid fa-info-circle mr-2"></i>
+                                    <strong>Informação:</strong> O valor já guardado ({deletingGoal.saved} moedas) será devolvido integralmente ao saldo livre da criança.
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 mt-4">
+                                    <button onClick={() => setModalOpen(false)} className="bg-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-300">Cancelar</button>
+                                    <button onClick={handleDeleteGoal} className="bg-red-500 text-white py-3 rounded-xl font-bold hover:bg-red-600">{deletingGoal.approved ? "Excluir" : "Recusar"}</button>
+                                </div>
+                            </div>
+                        </Modal>
+                    )}
+
+                    {modalOpen && modalType === 'edit-goal' && editingGoal && (
+                        <Modal title="Editar Meta" onClose={() => setModalOpen(false)}>
+                            <form onSubmit={(e) => { e.preventDefault(); handleGoalUpdate(editingGoal.id, e.target.amount.value, e.target.name.value, e.target.approved.checked); }} className="space-y-4">
+                                <div><label className="block text-sm font-bold text-gray-600">Nome da Meta</label><input name="name" defaultValue={editingGoal.name} className="soft-input w-full p-2 rounded-lg" required /></div>
+                                <div><label className="block text-sm font-bold text-gray-600">Valor Alvo</label><input name="amount" type="number" defaultValue={editingGoal.amount} className="soft-input w-full p-2 rounded-lg" required /></div>
+                                <div className="flex items-center gap-2"><input type="checkbox" name="approved" defaultChecked={editingGoal.approved} id="check-approve" /><label htmlFor="check-approve" className="text-sm font-bold text-gray-600">Aprovada</label></div>
+                                <button type="submit" className="w-full bg-green-500 text-white p-3 rounded-xl font-bold">Salvar</button>
+                            </form>
+                        </Modal>
+                    )}
+                    {modalOpen && modalType === 'give-money' && (
+                        <Modal title="Enviar Moedas 💰" onClose={() => setModalOpen(false)}>
+                            <form onSubmit={(e) => { e.preventDefault(); handleGiveMoney(e.target.amount.value, e.target.reason.value); }} className="space-y-4">
+                                <div><label className="block text-sm font-bold text-gray-600">Quantidade</label><input name="amount" type="number" placeholder="0" className="soft-input w-full p-3 rounded-lg text-lg font-bold" required min="1" /></div>
+                                <div><label className="block text-sm font-bold text-gray-600">Motivo</label><input name="reason" type="text" placeholder="Ex: Mesada" className="soft-input w-full p-3 rounded-lg" /></div>
+                                <button type="submit" className="w-full bg-green-500 text-white p-3 rounded-xl font-bold">Enviar</button>
+                            </form>
+                        </Modal>
+                    )}
+                    {modalOpen && modalType === 'add-task' && (
+                        <Modal title="Nova Tarefa 📝" onClose={() => setModalOpen(false)}>
+                            <form onSubmit={(e) => { e.preventDefault(); handleAddTask(e.target.task.value, e.target.reward.value); }} className="space-y-4">
+                                <div><label className="block text-sm font-bold text-gray-600">Descrição</label><input name="task" type="text" placeholder="Ex: Arrumar quarto" className="soft-input w-full p-3 rounded-lg" required /></div>
+                                <div><label className="block text-sm font-bold text-gray-600">Recompensa</label><input name="reward" type="number" placeholder="0" className="soft-input w-full p-3 rounded-lg font-bold text-orange-500" required min="0" /></div>
+                                <button type="submit" className="w-full bg-purple-500 text-white p-3 rounded-xl font-bold">Criar</button>
+                            </form>
+                        </Modal>
+                    )}
+
+                    <div className="max-w-4xl mx-auto relative z-10 animate-fade-in-up">
+                        <div className="flex justify-between items-center mb-6 bg-white/70 p-4 rounded-3xl backdrop-blur-md shadow-card-glow border-2 border-white">
+                            <div>
+                                <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-2">
+                                    Olá, {parentData.name}!
+                                    <button onClick={handleOpenEditParentName} className="text-sm text-blue-500 hover:text-blue-700 bg-white p-2 rounded-full shadow-sm w-8 h-8 flex items-center justify-center transition-transform hover:scale-110"><i className="fa-solid fa-pencil"></i></button>
+                                </h1>
+                                <p className="text-slate-500 font-medium">Gestão Financeira</p>
+                            </div>
+                            <div className="flex gap-2">
+                                {view === 'child-detail' && (<button onClick={() => { setView('list'); setSelectedChild(null); }} className="bg-gray-200 text-gray-600 px-4 py-2 rounded-full font-bold hover:bg-gray-300 transition-colors"><i className="fa-solid fa-arrow-left mr-2"></i> Voltar</button>)}
+                                <button id="help-btn" onClick={() => setShowTutorial(true)} className="bg-yellow-100 text-yellow-600 p-3 rounded-full hover:bg-yellow-200 transition-colors shadow-sm"><i className="fa-solid fa-question text-xl"></i></button>
+                                <button onClick={() => { localStorage.removeItem('fin_session'); window.location.href = 'fluxo-login.html'; }} className="bg-red-100 text-red-500 p-3 rounded-full hover:bg-red-200 transition-colors shadow-sm"><i className="fa-solid fa-right-from-bracket"></i></button>
+                            </div>
+                        </div>
+
+                        {view === 'list' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div id="add-child-btn" onClick={addChild} className="bg-white/60 border-4 border-dashed border-blue-200 p-6 rounded-[2.5rem] flex flex-col items-center justify-center cursor-pointer hover:bg-white/80 transition-all min-h-[200px] group shadow-sm">
+                                    <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center text-blue-500 text-3xl mb-4 group-hover:scale-110 transition-transform"><i className="fa-solid fa-plus"></i></div>
+                                    <h3 className="text-xl font-bold text-slate-600">Adicionar Criança</h3>
+                                </div>
+                                {parentData.children.map(child => (
+                                    <div key={child.uid} onClick={() => loadChildDetails(child.uid)} className="bg-white p-6 rounded-[2.5rem] shadow-soft-blue relative overflow-hidden group border-4 border-white cursor-pointer hover:scale-[1.02] transition-transform">
+                                        
+                                        {/* Botões de Ação na Lista */}
+                                        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={(e) => handleOpenEditChildName(e, child)} className="bg-white text-blue-500 p-2 rounded-full shadow-md hover:bg-blue-50 w-8 h-8 flex items-center justify-center"><i className="fa-solid fa-pencil"></i></button>
+                                            <button onClick={(e) => handleOpenDeleteChild(e, child)} className="bg-white text-red-500 p-2 rounded-full shadow-md hover:bg-red-50 w-8 h-8 flex items-center justify-center"><i className="fa-solid fa-trash"></i></button>
+                                        </div>
+
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center text-2xl text-blue-400 overflow-hidden border-2 border-blue-100">
+                                                    {renderProfileIcon(child.profileIcon)}
+                                                </div>
+                                                <div><h3 className="text-2xl font-bold text-slate-800">{child.name}</h3><p className="text-slate-400 font-medium text-sm">Código: {child.code}</p></div>
+                                            </div>
+                                            <i className="fa-solid fa-chevron-right text-gray-300"></i>
+                                        </div>
+                                        <p className="text-sm text-center text-blue-500 font-bold bg-blue-50 p-2 rounded-lg">Clique para ver detalhes</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {view === 'child-detail' && selectedChild && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="md:col-span-1 space-y-6">
+                                    <div className="bg-white p-6 rounded-[2rem] shadow-soft-blue text-center border-4 border-white">
+                                        <div className="relative inline-block">
+                                            <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center text-4xl text-blue-500 mx-auto mb-3 overflow-hidden border-2 border-blue-200">
+                                                {renderProfileIcon(selectedChild.profileIcon, "text-5xl")}
+                                            </div>
+                                            <div className="absolute bottom-0 right-0 bg-white p-1 rounded-full text-2xl shadow-sm">{selectedChild.currentEmotion?.value || '😊'}</div>
+                                        </div>
+                                        <h2 className="text-3xl font-bold text-slate-800">{selectedChild.name}</h2>
+                                        <p className="text-orange-500 font-bold text-xl mt-2">{selectedChild.coins} Moedas</p>
+                                        <div className="mt-4 grid grid-cols-2 gap-2">
+                                            <button id="btn-give-money" onClick={() => { setModalType('give-money'); setModalOpen(true); }} className="bg-green-100 text-green-700 py-2 rounded-xl font-bold hover:bg-green-200 transition-colors text-sm"><i className="fa-solid fa-coins mb-1 text-xl"></i> Dar $$</button>
+                                            <button id="btn-add-task" onClick={() => { setModalType('add-task'); setModalOpen(true); }} className="bg-purple-100 text-purple-700 py-2 rounded-xl font-bold hover:bg-purple-200 transition-colors text-sm"><i className="fa-solid fa-list-check mb-1 text-xl"></i> Tarefa</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="pending-tasks-area" className="bg-white p-6 rounded-[2rem] shadow-soft-blue border-l-8 border-purple-400">
+                                        <h3 className="text-lg font-bold text-purple-700 mb-3 flex items-center gap-2"><i className="fa-solid fa-list-check"></i> Tarefas Pendentes</h3>
+                                        {selectedChild.tasks.length === 0 ? (<p className="text-gray-400 text-center text-sm">Sem tarefas.</p>) : (
+                                            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                                                {selectedChild.tasks.map(task => (
+                                                    <div key={task.id} className={`p-2 rounded-lg border flex flex-col ${task.completed ? (task.approved ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200') : 'bg-gray-50 border-gray-200'}`}>
+                                                        <div className="flex justify-between items-start"><span className="text-sm font-bold text-slate-700">{task.text}</span><span className="text-xs font-bold text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full">+{task.reward}</span></div>
+                                                        <div className="flex justify-between items-center mt-2">
+                                                            <span className="text-xs text-gray-500">{task.approved ? 'Aprovada' : task.completed ? 'Aguardando Aprovação' : 'Pendente'}</span>
+                                                            <div className="flex gap-1">
+                                                                {task.completed && !task.approved && (<button onClick={() => handleApproveTask(task.id)} className="bg-green-500 text-white p-1 rounded hover:bg-green-600 text-xs shadow-sm font-bold px-2">Pagar</button>)}
+                                                                <button onClick={() => handleDeleteTask(task.id)} className="text-red-400 hover:text-red-600 p-1"><i className="fa-solid fa-trash"></i></button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="md:col-span-2 space-y-6">
+                                    <div id="goals-section" className="bg-white p-6 rounded-[2rem] shadow-soft-blue border-l-8 border-green-400">
+                                        <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2"><i className="fa-solid fa-bullseye"></i> Metas</h3>
+                                        {selectedChild.progress.goals.length === 0 ? (<p className="text-gray-400 text-center py-4">Nenhuma meta.</p>) : (
+                                            <div className="space-y-3">{selectedChild.progress.goals.map(goal => (
+                                                <div key={goal.id} className="bg-green-50 p-4 rounded-xl border border-green-100 flex justify-between items-center">
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold text-slate-700">{goal.name}</span>
+                                                            {!goal.approved && <span className="bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded-full border border-yellow-300 font-bold">Pendente</span>}
+                                                        </div>
+                                                        <p className="text-sm text-gray-500">{goal.saved} / {goal.amount} moedas</p>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        {goal.saved >= goal.amount && (
+                                                            <button onClick={() => handleOpenRewardModal(goal)} className="p-2 bg-purple-500 text-white rounded-lg shadow-sm hover:bg-purple-600 font-bold text-xs animate-pulse">Entregar 🎁</button>
+                                                        )}
+                                                        {!goal.approved && goal.saved < goal.amount && (
+                                                            <button onClick={() => handleApproveGoal(goal.id)} className="p-2 bg-green-500 text-white rounded-lg shadow-sm hover:bg-green-600 font-bold text-xs">Aprovar</button>
+                                                        )}
+                                                        <button onClick={() => { setEditingGoal(goal); setModalType('edit-goal'); setModalOpen(true); }} className="p-2 bg-white text-blue-500 rounded-lg shadow-sm hover:text-blue-700"><i className="fa-solid fa-pencil"></i></button>
+                                                        <button onClick={() => handleOpenDeleteModal(goal)} className="p-2 bg-white text-red-500 rounded-lg shadow-sm hover:text-red-700"><i className="fa-solid fa-trash"></i></button>
+                                                    </div>
+                                                </div>
+                                            ))}</div>
+                                        )}
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-[2rem] shadow-soft-blue">
+                                        <h3 className="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2"><i className="fa-solid fa-clock-rotate-left"></i> Histórico</h3>
+                                        <div className="max-h-60 overflow-y-auto pr-2 space-y-2">
+                                            {(!selectedChild.transactions || selectedChild.transactions.length === 0) ? (<p className="text-center text-gray-400">Sem transações.</p>) : (
+                                                selectedChild.transactions.map((t, i) => (
+                                                    <div key={i} className={`flex justify-between items-center p-3 rounded-lg border-l-4 ${t.type === 'earn' ? 'bg-green-50 border-green-400' : t.type === 'spend' ? 'bg-red-50 border-red-400' : 'bg-blue-50 border-blue-400'}`}>
+                                                        <div><p className="text-xs text-gray-500 font-bold">{t.date}</p><p className="text-sm text-slate-700 font-medium">{t.description}</p></div>
+                                                        <span className={`font-bold ${t.type === 'earn' ? 'text-green-600' : t.type === 'spend' ? 'text-red-600' : 'text-blue-600'}`}>{t.type === 'earn' ? '+' : '-'}{t.amount}</span>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ParentDashboard />);
+    </script>
+</body>
+</html>

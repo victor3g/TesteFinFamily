@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Fin Family - Meu Espaço</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Fredoka', 'sans-serif'] }, animation: { 'fade-in-up': 'fadeInUp 0.4s ease-out forwards', 'bounce-slow': 'bounce 3s infinite', 'pulse-slow': 'pulse 3s infinite', 'wiggle': 'wiggle 0.5s ease-in-out' }, keyframes: { fadeInUp: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }, wiggle: { '0%, 100%': { transform: 'rotate(0deg) scale(1)' }, '25%': { transform: 'rotate(-10deg) scale(1.1)' }, '75%': { transform: 'rotate(10deg) scale(1.1)' } }, popIn: { '0%': { opacity: '0', transform: 'translateX(-50%) scale(0.5)' }, '80%': { transform: 'translateX(-50%) scale(1.1)' }, '100%': { opacity: '1', transform: 'translateX(-50%) scale(1)' } } }, boxShadow: { 'soft': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' } } } }
+    </script>
+    <style>
+        /* ... (CSS Igual) ... */
+        body { font-family: 'Fredoka', sans-serif; transition: background 0.5s ease; }
+        .bg-polka { background-image: radial-gradient(rgba(255, 255, 255, 0.3) 2px, transparent 2px); background-size: 24px 24px; }
+        .soft-card { background: rgba(255, 255, 255, 0.95); border-radius: 1.5rem; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); border: 2px solid rgba(255, 255, 255, 0.6); }
+        .action-btn { transition: transform 0.1s; cursor: pointer; }
+        .action-btn:active { transform: scale(0.95); }
+        .soft-input { border: 2px solid #E2E8F0; transition: 0.3s; outline: none; }
+        .soft-input:focus { border-color: #60A5FA; }
+        .tutorial-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: transparent; z-index: 999; pointer-events: auto; }
+        .tutorial-highlight { position: fixed; z-index: 1000; background: transparent; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75), 0 0 20px rgba(255, 255, 255, 0.5); border-radius: 16px; pointer-events: none; transition: all 0.3s ease; border: 2px solid rgba(255,255,255,0.8); }
+        .tutorial-tooltip { position: fixed; z-index: 1001; background: white; padding: 20px; border-radius: 20px; width: 280px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3); animation: fadeInUp 0.4s ease; }
+        .speech-bubble { position: absolute; top: -80px; left: 50%; transform: translateX(-50%); background: #ffffff; border: 3px solid #BFDBFE; border-radius: 20px; padding: 12px 16px; font-size: 15px; font-weight: 600; color: #4B5563; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); white-space: nowrap; opacity: 0; pointer-events: none; z-index: 20; transition: opacity 0.2s; }
+        .speech-bubble.visible { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 1; }
+        .speech-bubble::after { content: ''; position: absolute; bottom: -8px; left: 50%; margin-left: -8px; border-width: 8px 8px 0; border-style: solid; border-color: #BFDBFE transparent transparent transparent; }
+        .custom-checkbox { appearance: none; width: 24px; height: 24px; border: 2px solid #CBD5E1; border-radius: 6px; display: grid; place-content: center; transition: 0.2s; cursor: pointer; }
+        .custom-checkbox::before { content: "\f00c"; font-family: "Font Awesome 6 Free"; font-weight: 900; color: white; font-size: 14px; transform: scale(0); transition: 0.2s; }
+        .custom-checkbox:checked { background: #4ADE80; border-color: #4ADE80; }
+        .custom-checkbox:checked::before { transform: scale(1); }
+    </style>
+</head>
+<body class="bg-gradient-to-b from-blue-100 to-purple-100 min-h-screen relative overflow-x-hidden">
+    <div class="absolute inset-0 bg-polka opacity-50 pointer-events-none"></div>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // ... (Mesmas constantes e configuração do React/Supabase) ...
+        const { useState, useEffect, useRef } = React;
+        const supabase = window.supabase.createClient("https://jwwgsyibgwpvgfbsltzr.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3d2dzeWliZ3dwdmdmYnNsdHpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNzkzMDAsImV4cCI6MjA3ODk1NTMwMH0.9iA_dKu4UJf-tQV03YdG8J1N4FhuP_flxHr7HWDbt9I");
+
+        const MASCOT_MESSAGES = ["Oi amiguinho! Vamos poupar? 🐷", "Ei! Isso faz cócegas! 🤭", "Você é meu melhor amigo! 💖", "Olha só quantas moedas! 🪙", "Qual o seu sonho hoje? 💭", "Guardar dinheiro é super poder! 🦸", "Estou cuidando do seu cofre! 🛡️", "Você está brilhando hoje! ✨", "Vamos ver nossas conquistas? 🏆", "Dica mágica: Poupar é ganhar! 🪄"];
+        const BADGES_LIST = [ { id: 'first_earn', name: 'Primeiro Ganho', icon: 'fa-star', desc: 'Ganhou suas primeiras moedas!' }, { id: 'first_save', name: 'Poupador', icon: 'fa-piggy-bank', desc: 'Guardou dinheiro no cofrinho.' }, { id: 'big_saver', name: 'Super Poupador', icon: 'fa-sack-dollar', desc: 'Juntou 100 moedas.' }, { id: 'task_master', name: 'Mestre das Tarefas', icon: 'fa-clipboard-check', desc: 'Completou 5 tarefas.' } ];
+        
+        const DEFAULT_CHILD_DATA = { name: "Criança", coins: 0, tasks: [], transactions: [], notifications: [], badges: [], progress: { goals: [] }, profileIcon: { type: 'fa-icon', value: 'fa-user-astronaut' }, currentEmotion: { value: '😊' }, currentPet: { type: 'emoji', value: '🐷' }, inventory: { themes: ['padrão'], icons: ['fa-user-astronaut'], emotions: ['😊', '😢', '😠', '😐'], pets: ['🐷'] }, settings: { theme: 'padrão' } };
+        const THEMES = { padrão: { start: '#99BFFB', end: '#C7F8DC', name: 'Original' }, rosa: { start: '#FFC0CB', end: '#ADD8E6', name: 'Doce Sonho' }, sol: { start: '#FFC72C', end: '#F97316', name: 'Dia de Sol' }, noite: { start: '#483D8B', end: '#00008B', name: 'Espaço' }, floresta: { start: '#A7F3D0', end: '#059669', name: 'Floresta' }, oceano: { start: '#00BFFF', end: '#1E90FF', name: 'Fundo do Mar' }, vulcao: { start: '#FF4500', end: '#8B0000', name: 'Vulcão' }, unicornio: { start: '#E0B0FF', end: '#FFB6C1', name: 'Unicórnio' }, cyber: { start: '#00FF00', end: '#FF00FF', name: 'Cyberpunk' } };
+        const PET_VISUALS = { 'piggy': '🐷', 'cat': '🐱', 'dog': '🐶', 'bear': '🐻', 'rabbit': '🐰', 'fox': '🦊', 'lion': '🦁', 'unicorn': '🦄', 'dino': '🦕', 'octopus': '🐙', 'alien': '👽' };
+
+        const Modal = ({ title, onClose, children }) => (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in-up">
+                <div className="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl relative border-4 border-white max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center mb-4 border-b pb-2">
+                        <h3 className="text-2xl font-bold text-gray-800">{title}</h3>
+                        <button onClick={onClose} className="text-gray-400 hover:text-red-500 text-2xl"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                    {children}
+                </div>
+            </div>
+        );
+
+        const Tutorial = ({ steps, onClose }) => {
+            const [currentStep, setCurrentStep] = useState(0);
+            const [style, setStyle] = useState({});
+            const [tooltipStyle, setTooltipStyle] = useState({});
+
+            useEffect(() => {
+                const updatePos = () => {
+                    const step = steps[currentStep];
+                    if (!step) return;
+                    const el = document.querySelector(step.target);
+                    if (el) {
+                        const rect = el.getBoundingClientRect();
+                        setStyle({ top: rect.top - 5, left: rect.left - 5, width: rect.width + 10, height: rect.height + 10 });
+                        let top = rect.bottom + 20; let left = rect.left + (rect.width/2) - 140;
+                        if(left < 10) left = 10; if(left + 280 > window.innerWidth) left = window.innerWidth - 290; if(top + 200 > window.innerHeight) top = rect.top - 250;
+                        setTooltipStyle({ top, left });
+                    } else {
+                        setStyle({ display: 'none' }); setTooltipStyle({ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' });
+                    }
+                };
+                setTimeout(updatePos, 100);
+                window.addEventListener('resize', updatePos); window.addEventListener('scroll', updatePos);
+                return () => { window.removeEventListener('resize', updatePos); window.removeEventListener('scroll', updatePos); };
+            }, [currentStep, steps]);
+
+            const next = () => currentStep < steps.length - 1 ? setCurrentStep(currentStep + 1) : onClose();
+            
+            return (
+                <div className="tutorial-overlay">
+                    <div className="tutorial-highlight" style={style}></div>
+                    <div className="tutorial-tooltip" style={tooltipStyle}>
+                        <div className="text-4xl mb-2">{steps[currentStep].emoji}</div>
+                        <h4 className="text-xl font-bold text-gray-800 mb-2">{steps[currentStep].title}</h4>
+                        <p className="text-gray-600 text-sm mb-4 leading-relaxed">{steps[currentStep].content}</p>
+                        <div className="flex justify-between items-center"><span className="text-xs text-gray-400 font-bold">{currentStep + 1} / {steps.length}</span><button onClick={next} className="bg-blue-500 text-white px-6 py-2 rounded-xl font-bold shadow-md hover:bg-blue-600 transition-colors">{currentStep === steps.length - 1 ? 'Vamos lá! 🚀' : 'Próximo ➡'}</button></div>
+                    </div>
+                </div>
+            );
+        };
+
+        function ChildDashboard() {
+            const [data, setData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [modal, setModal] = useState(null); 
+            const [activeGoalIndex, setActiveGoalIndex] = useState(0);
+            const [customizeTab, setCustomizeTab] = useState('themes');
+            const [mascotMessage, setMascotMessage] = useState('');
+            const [showMascotBubble, setShowMascotBubble] = useState(false);
+            const [isMascotReacting, setIsMascotReacting] = useState(false);
+            const [newGoalName, setNewGoalName] = useState('');
+            const [newGoalAmount, setNewGoalAmount] = useState('');
+            const [depositAmount, setDepositAmount] = useState('');
+            const [depositError, setDepositError] = useState('');
+            const [showTutorial, setShowTutorial] = useState(false);
+            const [notificationModal, setNotificationModal] = useState(null); // Estado para notificação
+
+            useEffect(() => {
+                const init = async () => {
+                    let session = null;
+                    try { session = JSON.parse(localStorage.getItem('fin_session')); } catch (e) {}
+                    if (!session || session.role !== 'child') { try { window.location.href = 'fluxo-login.html'; } catch (e) { } return; }
+                    const { data: dbData } = await supabase.from('child_profiles').select('data').eq('user_id', session.uid).single();
+                    let userData = { ...DEFAULT_CHILD_DATA, ...(dbData?.data || {}) };
+                    if(!userData.progress.goals) userData.progress.goals = [];
+                    if(!userData.inventory) userData.inventory = DEFAULT_CHILD_DATA.inventory;
+                    const basicEmotions = ['😊', '😢', '😠', '😐'];
+                    const currentEmotions = new Set(userData.inventory.emotions || []);
+                    basicEmotions.forEach(emoji => currentEmotions.add(emoji));
+                    userData.inventory.emotions = Array.from(currentEmotions);
+                    setData(userData);
+                    applyTheme(userData.settings.theme);
+                    setLoading(false);
+                    if (!localStorage.getItem('child_tutorial_done')) { setTimeout(() => setShowTutorial(true), 1500); }
+                };
+                init();
+            }, []);
+
+            // --- PROCESSAMENTO DE NOTIFICAÇÕES (Realtime) ---
+            useEffect(() => {
+                if (data && data.notifications && data.notifications.length > 0) {
+                    const notif = data.notifications[0];
+                    setNotificationModal(notif); // Exibe modal
+                    
+                    // Remove do banco
+                    const updatedNotifications = data.notifications.slice(1);
+                    updateData({ ...data, notifications: updatedNotifications });
+                }
+            }, [data]);
+
+            const updateData = async (newData) => {
+                const session = JSON.parse(localStorage.getItem('fin_session'));
+                setData(newData);
+                if (newData.settings.theme) applyTheme(newData.settings.theme);
+                await supabase.from('child_profiles').update({ data: newData }).eq('user_id', session.uid);
+                
+                const { data: childRecord } = await supabase.from('child_profiles').select('parent_id').eq('user_id', session.uid).single();
+                if (childRecord && childRecord.parent_id) {
+                    const { data: parentRecord } = await supabase.from('parent_control').select('data').eq('user_id', childRecord.parent_id).single();
+                    if (parentRecord) {
+                        const parentData = parentRecord.data;
+                        const updatedChildren = parentData.children.map(child => {
+                            if (child.uid === session.uid) { return { ...child, profileIcon: newData.profileIcon, name: newData.name }; }
+                            return child;
+                        });
+                        await supabase.from('parent_control').update({ data: { ...parentData, children: updatedChildren } }).eq('user_id', childRecord.parent_id);
+                    }
+                }
+            };
+
+            const applyTheme = (key) => {
+                const t = THEMES[key] || THEMES['padrão'];
+                document.body.style.background = `linear-gradient(180deg, ${t.start} 0%, ${t.end} 100%)`;
+            };
+
+            const handleMascotClick = () => {
+                const randomMsg = MASCOT_MESSAGES[Math.floor(Math.random() * MASCOT_MESSAGES.length)];
+                setMascotMessage(randomMsg);
+                setShowMascotBubble(true);
+                setIsMascotReacting(true);
+                setTimeout(() => setIsMascotReacting(false), 500); 
+                setTimeout(() => setShowMascotBubble(false), 3000); 
+            };
+
+            const renderProfileIcon = (iconData, sizeClass = "text-3xl") => {
+                if (iconData.type === 'fa-icon') return <i className={`fa-solid ${iconData.value} ${sizeClass}`}></i>;
+                if (iconData.type === 'emoji') return <span className={sizeClass}>{iconData.value}</span>;
+                if (iconData.type === 'image-data') return <img src={iconData.value} className="w-full h-full object-cover rounded-full aspect-square" alt="Perfil" />;
+                return <i className={`fa-solid fa-user ${sizeClass}`}></i>;
+            };
+
+            const handleImageUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => { updateData({ ...data, profileIcon: { type: 'image-data', value: reader.result } }); };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handleCreateGoal = (e) => {
+                e.preventDefault();
+                if (!newGoalName || !newGoalAmount) return;
+                const newGoal = { id: Date.now(), name: newGoalName, amount: parseFloat(newGoalAmount), saved: 0, icon: 'fa-star', approved: false };
+                const newGoals = [...data.progress.goals, newGoal];
+                updateData({ ...data, progress: { ...data.progress, goals: newGoals } });
+                setNewGoalName(''); setNewGoalAmount(''); setModal(null);
+                setMascotMessage("Sonho criado! Peça para o responsável aprovar. ⏳");
+                setShowMascotBubble(true); setTimeout(() => setShowMascotBubble(false), 3000);
+            };
+
+            const handleOpenDepositModal = () => { setDepositAmount(''); setDepositError(''); setModal('deposit-goal'); };
+            const handleOpenDeleteModal = () => { setModal('delete-goal'); };
+
+            const executeDelete = () => {
+                const goal = data.progress.goals[activeGoalIndex];
+                const penalty = Math.floor(goal.saved * 0.20);
+                const refund = goal.saved - penalty;
+                const newGoals = data.progress.goals.filter((_, i) => i !== activeGoalIndex);
+                let newTransactions = data.transactions;
+                if(goal.saved > 0) {
+                    newTransactions = [{ id: Date.now(), type: 'earn', amount: refund, description: `Reembolso Meta: ${goal.name} (c/ taxa)`, date: new Date().toLocaleDateString() }, ...data.transactions];
+                }
+                updateData({ ...data, coins: data.coins + refund, progress: { ...data.progress, goals: newGoals }, transactions: newTransactions });
+                setActiveGoalIndex(0);
+                setModal(null);
+                setMascotMessage("Oh não! Mas não desista do próximo sonho! 💪"); setShowMascotBubble(true); setTimeout(() => setShowMascotBubble(false), 4000);
+            };
+
+            const executeDeposit = (e) => {
+                e.preventDefault();
+                const goal = data.progress.goals[activeGoalIndex];
+                if (!goal) return;
+                const value = parseInt(depositAmount);
+                if (isNaN(value) || value <= 0) { setDepositError("Por favor, digite um número válido."); return; }
+                if (value > data.coins) { setDepositError("Ops! Você não tem moedas suficientes."); return; }
+                const remaining = goal.amount - goal.saved;
+                if (value > remaining) { setDepositError(`Você não pode guardar mais do que falta! Faltam apenas ${remaining} moedas.`); return; }
+                setDepositError(''); 
+
+                const updatedGoals = [...data.progress.goals];
+                updatedGoals[activeGoalIndex].saved += value;
+                const newTrans = { id: Date.now(), type: 'save', amount: value, description: `Guardou para: ${goal.name}`, date: new Date().toLocaleDateString() };
+                updateData({ ...data, coins: data.coins - value, progress: { ...data.progress, goals: updatedGoals }, transactions: [newTrans, ...data.transactions] });
+                
+                if (updatedGoals[activeGoalIndex].saved >= goal.amount) {
+                    setMascotMessage("PARABÉNS! VOCÊ CONSEGUIU! 🎉"); setShowMascotBubble(true); setModal('congrats-goal');
+                } else {
+                    setMascotMessage("Eba! Você está poupando! 🌟"); setShowMascotBubble(true); setIsMascotReacting(true); setTimeout(() => { setIsMascotReacting(false); setShowMascotBubble(false); }, 3000); setModal(null);
+                }
+            };
+
+            const toggleTask = (taskId) => {
+                const taskIndex = data.tasks.findIndex(t => t.id === taskId);
+                if (taskIndex === -1) return;
+                const task = data.tasks[taskIndex];
+                const isChecking = !task.completed;
+                let newCoins = data.coins;
+                let newTransactions = data.transactions;
+                if (isChecking) {
+                    const updatedTask = { ...task, completed: true, approved: false };
+                    const newTasks = [...data.tasks];
+                    newTasks[taskIndex] = updatedTask;
+                    updateData({ ...data, tasks: newTasks });
+                    setMascotMessage("Tarefa enviada! Espere a aprovação! ⏳"); setShowMascotBubble(true); setTimeout(() => setShowMascotBubble(false), 3000);
+                } else {
+                    if (task.approved) {
+                        const refundAmount = parseInt(task.reward || 0);
+                        if (refundAmount > 0) {
+                            newCoins = Math.max(0, newCoins - refundAmount);
+                            newTransactions = [{ id: Date.now(), type: 'spend', amount: refundAmount, description: `Estorno tarefa: ${task.text}`, date: new Date().toLocaleDateString() }, ...data.transactions];
+                        }
+                    }
+                    const updatedTask = { ...task, completed: false, approved: false };
+                    const newTasks = [...data.tasks];
+                    newTasks[taskIndex] = updatedTask;
+                    updateData({ ...data, tasks: newTasks, coins: newCoins, transactions: newTransactions });
+                }
+            };
+
+            const TUTORIAL_STEPS = [
+                { target: null, title: "Bem-vindo! 👋", content: "Este é o seu espaço mágico! Vamos ver como funciona?", emoji: "🐷" },
+                { target: "#mascot-area", title: "Seu Mascote", content: "Toque nele para brincar! Aqui você também vê quantas moedas ganhou.", emoji: "✨" },
+                { target: "#game-link", title: "Hora da Diversão! 🎮", content: "Clique aqui para jogar o 'Saltitante' e ganhar mais moedas para o seu cofre.", emoji: "🕹️" },
+                { target: "#store-link", title: "Loja Mágica 🛍️", content: "Use suas moedas para comprar roupas para o mascote e temas coloridos para o app.", emoji: "🛒" },
+                { target: "#goals-area", title: "Seus Sonhos 💭", content: "Crie metas (como uma bicicleta) e guarde moedinhas aqui para alcançá-las.", emoji: "🎯" },
+                { target: "#tasks-area", title: "Missões Diárias 📝", content: "Faça as tarefas para ganhar moedas! Depois de marcar, peça para o responsável aprovar.", emoji: "✅" },
+                { target: "#badges-btn", title: "Conquistas 🏆", content: "Ganhe troféus e medalhas ao poupar, jogar e completar tarefas. Colecione todas!", emoji: "🥇" },
+                { target: "#customize-btn", title: "Personalize 🎨", content: "Use suas moedas para deixar o aplicativo com a sua cara!", emoji: "🧢" },
+                { target: "#help-btn", title: "Precisa de ajuda? ❓", content: "Se esquecer como algo funciona, clique aqui para ver este tutorial de novo!", emoji: "💡" }
+            ];
+
+            if (loading) return <div className="flex h-screen items-center justify-center text-white text-2xl font-bold">Carregando...</div>;
+
+            const currentGoal = data.progress.goals[activeGoalIndex];
+            const hasGoals = data.progress.goals.length > 0;
+            const progressPct = currentGoal ? Math.min(100, (currentGoal.saved / currentGoal.amount) * 100) : 0;
+            const isGoalApproved = currentGoal?.approved === true;
+            const isGoalCompleted = currentGoal && currentGoal.saved >= currentGoal.amount;
+            const penaltyAmount = currentGoal ? Math.floor(currentGoal.saved * 0.20) : 0;
+            const refundAmount = currentGoal ? currentGoal.saved - penaltyAmount : 0;
+
+            return (
+                <div className="max-w-6xl mx-auto p-4 pb-20">
+                    <div className="absolute inset-0 bg-polka opacity-30 pointer-events-none fixed"></div>
+                    
+                    {showTutorial && <Tutorial steps={TUTORIAL_STEPS} onClose={() => { setShowTutorial(false); localStorage.setItem('child_tutorial_done', 'true'); }} />}
+
+                    {/* MODAL DE NOTIFICAÇÃO (MENSAGEM DE RECOMPENSA) */}
+                    {notificationModal && (
+                        <Modal title={notificationModal.title} onClose={() => setNotificationModal(null)}>
+                            <div className="text-center p-4">
+                                <div className="text-6xl mb-4">🎁</div>
+                                <p className="text-gray-700 font-medium text-lg">{notificationModal.message}</p>
+                                <button onClick={() => setNotificationModal(null)} className="mt-6 bg-blue-500 text-white w-full py-3 rounded-xl font-bold shadow-lg hover:bg-blue-600 transition-colors">Legal!</button>
+                            </div>
+                        </Modal>
+                    )}
+
+                    <div className="flex justify-between items-center mb-8 relative z-10">
+                        <div className="flex items-center gap-3 bg-white/90 p-2 pr-6 rounded-full shadow-lg cursor-pointer hover:scale-105 transition-transform" onClick={() => setModal('emotions')}>
+                            <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-3xl border-2 border-white shadow-sm overflow-hidden">{renderProfileIcon(data.profileIcon)}</div>
+                            <div><h2 className="font-bold text-gray-700 text-lg leading-tight">{data.name}</h2><div className="text-sm text-gray-500 font-bold bg-gray-100 px-2 rounded-full inline-block mt-1">Estou: {data.currentEmotion.value || data.currentEmotion}</div></div>
+                        </div>
+                        <div className="flex gap-3">
+                            <button id="help-btn" onClick={() => setShowTutorial(true)} className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full shadow-lg flex items-center justify-center text-xl hover:scale-110 transition-transform" title="Ver Tutorial"><i className="fa-solid fa-question"></i></button>
+                            <button id="badges-btn" onClick={() => setModal('badges')} className="w-12 h-12 bg-blue-100 text-blue-500 rounded-full shadow-lg flex items-center justify-center text-xl hover:scale-110 transition-transform"><i className="fa-solid fa-trophy"></i></button>
+                            <button id="customize-btn" onClick={() => setModal('customize')} className="w-12 h-12 bg-white text-purple-500 rounded-full shadow-lg flex items-center justify-center text-xl hover:rotate-12 transition-transform"><i className="fa-solid fa-paintbrush"></i></button>
+                            <button className="w-12 h-12 bg-red-100 text-red-500 rounded-full shadow-lg flex items-center justify-center text-xl hover:bg-red-200 transition-colors" onClick={() => { localStorage.removeItem('fin_session'); window.location.reload(); }}><i className="fa-solid fa-right-from-bracket"></i></button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+                        <div className="space-y-6" id="mascot-area">
+                            <div className="relative flex justify-center h-32 items-end">
+                                <div className={`speech-bubble ${showMascotBubble ? 'visible' : ''}`}>{mascotMessage}</div>
+                                <div onClick={handleMascotClick} className={`text-8xl drop-shadow-md cursor-pointer transition-transform select-none ${isMascotReacting ? 'animate-wiggle' : 'animate-bounce-slow hover:scale-110'}`}>{data.currentPet.type === 'emoji' ? data.currentPet.value : (PET_VISUALS[data.currentPet.value] || data.currentPet.value)}</div>
+                            </div>
+                            <div className="soft-card p-6 text-center relative overflow-hidden transform hover:scale-[1.02] transition-transform">
+                                <h1 className="text-6xl font-bold text-gray-800 tracking-tighter mb-1 flex items-center justify-center gap-3">{data.coins} <span className="text-4xl">🪙</span></h1>
+                                <p className="text-gray-400 font-bold uppercase tracking-widest text-sm bg-gray-100 inline-block px-4 py-1 rounded-full">Moedas Livres</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <a id="game-link" href="game.html" className="soft-card p-4 flex flex-col items-center justify-center text-center hover:bg-green-50 transition-colors cursor-pointer group h-32 border-b-4 border-green-200 active:border-b-0 active:translate-y-1"><i className="fa-solid fa-gamepad text-4xl text-green-500 mb-2 group-hover:scale-110 transition-transform"></i><span className="font-bold text-green-700">Jogar</span></a>
+                                <a id="store-link" href="store.html" className="soft-card p-4 flex flex-col items-center justify-center text-center hover:bg-purple-50 transition-colors cursor-pointer group h-32 border-b-4 border-purple-200 active:border-b-0 active:translate-y-1"><i className="fa-solid fa-store text-4xl text-purple-500 mb-2 group-hover:scale-110 transition-transform"></i><span className="font-bold text-purple-700">Loja</span></a>
+                            </div>
+                        </div>
+
+                        <div className="soft-card p-6 flex flex-col border-l-8 border-blue-400 relative min-h-[400px]" id="goals-area">
+                            <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-2xl text-blue-700"><i className="fa-solid fa-bullseye mr-2"></i>Meus Sonhos</h3><button onClick={() => setModal('new-goal')} className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 font-bold transition-colors"><i className="fa-solid fa-plus mr-1"></i> Novo</button></div>
+                            {hasGoals ? (
+                                <div className="flex-1 flex flex-col justify-between">
+                                    <div className="flex justify-center items-center gap-4 mb-4">
+                                        <button onClick={() => setActiveGoalIndex(Math.max(0, activeGoalIndex - 1))} disabled={activeGoalIndex === 0} className="text-gray-400 disabled:opacity-30 hover:text-blue-500"><i className="fa-solid fa-chevron-left text-xl"></i></button>
+                                        <span className="text-sm font-bold text-gray-400">{activeGoalIndex + 1} de {data.progress.goals.length}</span>
+                                        <button onClick={() => setActiveGoalIndex(Math.min(data.progress.goals.length - 1, activeGoalIndex + 1))} disabled={activeGoalIndex === data.progress.goals.length - 1} className="text-gray-400 disabled:opacity-30 hover:text-blue-500"><i className="fa-solid fa-chevron-right text-xl"></i></button>
+                                    </div>
+                                    <div className="text-center mb-6">
+                                        <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3 text-4xl text-yellow-500 shadow-sm border-4 border-white"><i className="fa-solid fa-star"></i></div>
+                                        <h4 className="text-xl font-bold text-gray-800">{currentGoal.name}</h4>
+                                        <p className="text-gray-500 text-sm font-medium mt-1">Faltam {Math.max(0, currentGoal.amount - currentGoal.saved)} moedas</p>
+                                        {!isGoalApproved && (<div className="mt-2 inline-block bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200 animate-pulse"><i className="fa-solid fa-clock mr-1"></i> Aguardando Aprovação</div>)}
+                                    </div>
+                                    <div className="mb-6 relative pt-4"><div className="h-6 bg-gray-100 rounded-full overflow-hidden shadow-inner border border-gray-200"><div className="h-full bg-gradient-to-r from-green-400 to-green-500 transition-all duration-1000 relative" style={{width: `${progressPct}%`}}><div className="absolute inset-0 bg-white/20 animate-pulse"></div></div></div><div className="flex justify-between text-xs font-bold mt-2 text-gray-500"><span>{currentGoal.saved}</span><span>{currentGoal.amount}</span></div></div>
+                                    
+                                    {!isGoalCompleted ? (
+                                        <div className="grid grid-cols-2 gap-3 mt-auto">
+                                            <button onClick={handleOpenDepositModal} disabled={!isGoalApproved} className={`py-3 rounded-xl font-bold shadow-lg transition-colors action-btn ${isGoalApproved ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-blue-200' : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'}`}>{isGoalApproved ? 'Guardar 💰' : 'Bloqueado 🔒'}</button>
+                                            <button onClick={handleOpenDeleteModal} className="bg-red-100 text-red-500 py-3 rounded-xl font-bold hover:bg-red-200 transition-colors action-btn">Desistir 🗑️</button>
+                                        </div>
+                                    ) : (
+                                        <div className="mt-auto bg-green-100 text-green-700 p-3 rounded-xl font-bold text-center animate-bounce shadow-inner border border-green-200">Meta Concluída! 🎉<br/><span class="text-xs text-green-600">Fale com seu responsável!</span></div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400 opacity-60"><i className="fa-solid fa-rocket text-6xl mb-4"></i><p>Nenhum sonho ainda.<br/>Crie um novo!</p></div>
+                            )}
+                        </div>
+
+                        <div className="space-y-6" id="tasks-area">
+                            <div className="soft-card p-6 min-h-[200px]">
+                                <h3 className="font-bold text-xl text-gray-700 mb-4 flex items-center gap-2"><span className="bg-yellow-100 p-1.5 rounded text-yellow-600"><i className="fa-solid fa-list-check"></i></span> Missões</h3>
+                                {data.tasks.length === 0 ? (<p className="text-center text-gray-400 py-8 text-sm">Nenhuma tarefa pendente. Divirta-se! 🎉</p>) : (
+                                    <ul className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {data.tasks.map(task => (
+                                            <li key={task.id} className={`p-3 rounded-xl border-2 transition-all flex items-center justify-between group ${task.completed ? (task.approved ? 'bg-green-50 border-green-200 opacity-60' : 'bg-yellow-50 border-yellow-200') : 'bg-white border-gray-100 hover:border-blue-200'}`}>
+                                                <div className="flex items-center gap-3">
+                                                    <input type="checkbox" className="custom-checkbox" checked={task.completed} onChange={() => toggleTask(task.id)} />
+                                                    <div><span className={`font-bold block text-sm ${task.completed ? 'text-gray-500' : 'text-gray-700'}`}>{task.text}</span><div className="flex items-center gap-2">{task.reward && <span className="text-xs text-orange-500 font-bold">+{task.reward} moedas</span>}{task.completed && !task.approved && <span className="text-[10px] bg-yellow-100 text-yellow-600 px-1.5 rounded font-bold"><i className="fa-solid fa-clock mr-1"></i>Aguardando</span>}{task.completed && task.approved && <span className="text-[10px] bg-green-100 text-green-600 px-1.5 rounded font-bold"><i className="fa-solid fa-check mr-1"></i>Feito</span>}</div></div>
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {modal === 'deposit-goal' && hasGoals && (
+                        <Modal title="Guardar Moedinhas 💰" onClose={() => setModal(null)}>
+                            <form onSubmit={executeDeposit} className="space-y-4">
+                                <p className="text-gray-600 font-medium">Quanto você quer guardar para <strong>{currentGoal.name}</strong>?</p>
+                                <p className="text-xs text-gray-400">Saldo disponível: {data.coins}</p>
+                                <div>
+                                    <input type="number" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="0" className={`soft-input w-full p-4 rounded-xl text-2xl font-bold text-center ${depositError ? 'border-red-400 text-red-600 bg-red-50' : 'text-blue-600'}`} autoFocus min="1" max={data.coins} />
+                                    {depositError && <p className="text-red-500 text-xs font-bold mt-2 bg-red-100 p-2 rounded-lg text-center animate-pulse">{depositError}</p>}
+                                </div>
+                                <button type="submit" className="w-full bg-green-500 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-green-600 transition-colors text-lg">Confirmar</button>
+                            </form>
+                        </Modal>
+                    )}
+
+                    {modal === 'congrats-goal' && hasGoals && (
+                        <Modal title="Meta Concluída! 🏆" onClose={() => setModal(null)}>
+                            <div className="text-center space-y-6">
+                                <div className="text-6xl animate-bounce">🎉⭐🎉</div>
+                                <h3 className="text-2xl font-bold text-green-600">Parabéns!</h3>
+                                <p className="text-gray-600 text-lg">Você completou a meta <strong>{currentGoal.name}</strong>!</p>
+                                <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
+                                    <p className="font-bold text-yellow-800">Você juntou todas as {currentGoal.amount} moedas!</p>
+                                </div>
+                                <button onClick={() => setModal(null)} className="w-full bg-blue-500 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-600 transition-colors text-lg animate-pulse">Que demais!</button>
+                            </div>
+                        </Modal>
+                    )}
+
+                    {modal === 'delete-goal' && hasGoals && (
+                        <Modal title="Não desista agora! 🥺" onClose={() => setModal(null)}>
+                            <div className="text-center space-y-6">
+                                <div className="text-6xl animate-pulse">💔</div>
+                                <p className="text-gray-600 font-medium text-lg">Se você desistir de <strong>{currentGoal.name}</strong> agora...</p>
+                                <div className="bg-red-50 p-4 rounded-xl border border-red-100 text-left space-y-2">
+                                    <div className="flex justify-between text-gray-500"><span>Você guardou:</span> <span>{currentGoal.saved}</span></div>
+                                    <div className="flex justify-between text-red-500 font-bold"><span>Taxa de desistência (20%):</span> <span>-{penaltyAmount}</span></div>
+                                    <div className="border-t pt-2 mt-2 flex justify-between text-xl font-bold text-gray-800"><span>Você recebe:</span> <span>{refundAmount}</span></div>
+                                </div>
+                                <p className="text-xs text-gray-400">Continue poupando para não perder moedinhas!</p>
+                                <div className="grid grid-cols-2 gap-3 mt-4"><button onClick={() => setModal(null)} className="bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 shadow-lg transform hover:scale-105 transition-all">Vou continuar!</button><button onClick={executeDelete} className="bg-gray-200 text-gray-500 py-3 rounded-xl font-bold hover:bg-gray-300 hover:text-red-500 transition-colors text-sm">Quero desistir...</button></div>
+                            </div>
+                        </Modal>
+                    )}
+
+                    {modal === 'new-goal' && (
+                        <Modal title="Novo Sonho 💭" onClose={() => setModal(null)}>
+                            <form onSubmit={handleCreateGoal} className="space-y-4">
+                                <div><label className="block text-sm font-bold text-gray-600 mb-1">Qual é o seu sonho?</label><input type="text" value={newGoalName} onChange={e => setNewGoalName(e.target.value)} placeholder="Ex: Bicicleta..." className="soft-input w-full p-3 rounded-xl" required /></div>
+                                <div><label className="block text-sm font-bold text-gray-600 mb-1">Quanto custa (Moedas)?</label><input type="number" value={newGoalAmount} onChange={e => setNewGoalAmount(e.target.value)} placeholder="0" className="soft-input w-full p-3 rounded-xl font-bold text-orange-500" required min="1" /></div>
+                                <button type="submit" className="w-full bg-green-500 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-green-600">Criar Sonho!</button>
+                            </form>
+                        </Modal>
+                    )}
+                    {modal === 'customize' && (
+                        <Modal title="Personalizar 🎨" onClose={() => setModal(null)}>
+                            <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                                <button onClick={() => setCustomizeTab('themes')} className={`tab-btn px-4 py-2 rounded-full text-sm font-bold transition-colors ${customizeTab === 'themes' ? 'bg-purple-100 text-purple-700' : 'text-gray-400'}`}>Temas</button>
+                                <button onClick={() => setCustomizeTab('icons')} className={`tab-btn px-4 py-2 rounded-full text-sm font-bold transition-colors ${customizeTab === 'icons' ? 'bg-purple-100 text-purple-700' : 'text-gray-400'}`}>Ícones</button>
+                                <button onClick={() => setCustomizeTab('pets')} className={`tab-btn px-4 py-2 rounded-full text-sm font-bold transition-colors ${customizeTab === 'pets' ? 'bg-purple-100 text-purple-700' : 'text-gray-400'}`}>Mascotes</button>
+                            </div>
+                            {customizeTab === 'icons' && (
+                                <div className="mb-4">
+                                    <div className="mb-4 text-center"><label className="cursor-pointer inline-block bg-blue-100 text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-200 transition-colors shadow-sm"><i className="fa-solid fa-camera mr-2"></i> Usar Foto do Dispositivo<input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" /></label></div>
+                                    <div className="grid grid-cols-3 gap-3 max-h-48 overflow-y-auto p-1">{data.inventory.icons.map(i => (<button key={i} onClick={() => updateData({...data, profileIcon: {type: 'fa-icon', value: i}})} className={`h-16 rounded-lg bg-blue-50 flex items-center justify-center text-3xl border-2 ${data.profileIcon.value === i ? 'border-yellow-400 ring-2 ring-yellow-200' : 'border-gray-200'}`}><i className={`fa-solid ${i} text-gray-600`}></i></button>))}</div>
+                                </div>
+                            )}
+                            <div className="grid grid-cols-3 gap-3 max-h-60 overflow-y-auto p-1">
+                                {customizeTab === 'themes' && data.inventory.themes.map(t => (<button key={t} onClick={() => updateData({...data, settings: {...data.settings, theme: t}})} className={`h-16 rounded-lg border-2 relative ${data.settings.theme === t ? 'border-yellow-400 ring-2 ring-yellow-200' : 'border-gray-200'}`} style={{background: `linear-gradient(135deg, ${THEMES[t]?.start || '#ccc'}, ${THEMES[t]?.end || '#ccc'})`}}><span className="absolute bottom-1 right-1 text-[10px] bg-white/80 px-1 rounded font-bold capitalize">{THEMES[t]?.name}</span></button>))}
+                                {customizeTab === 'pets' && data.inventory.pets.map(p => (<button key={p} onClick={() => updateData({...data, currentPet: {type: 'emoji', value: p}})} className={`h-16 rounded-lg bg-pink-50 flex items-center justify-center text-4xl border-2 ${data.currentPet.value === p ? 'border-yellow-400 ring-2 ring-yellow-200' : 'border-gray-200'}`}>{PET_VISUALS[p] || p}</button>))}
+                            </div>
+                        </Modal>
+                    )}
+                    {modal === 'badges' && (
+                        <Modal title="Minhas Conquistas 🏆" onClose={() => setModal(null)}>
+                            <div className="space-y-3">{BADGES_LIST.map(badge => { const isUnlocked = data.badges && data.badges.includes(badge.id); return (<div key={badge.id} className={`flex items-center gap-3 p-3 rounded-xl border ${isUnlocked ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200 opacity-60'}`}><div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl ${isUnlocked ? 'bg-yellow-100 text-yellow-500' : 'bg-gray-200 text-gray-400'}`}><i className={`fa-solid ${badge.icon}`}></i></div><div><h4 className="font-bold text-gray-800">{badge.name}</h4><p className="text-xs text-gray-500">{badge.desc}</p></div>{isUnlocked && <i className="fa-solid fa-check text-green-500 ml-auto"></i>}</div>) })}</div>
+                        </Modal>
+                    )}
+                    {modal === 'emotions' && (
+                        <Modal title="Como estou? 😊" onClose={() => setModal(null)}>
+                            <div className="grid grid-cols-4 gap-3">{data.inventory.emotions.map(e => (<button key={e} onClick={() => { updateData({...data, currentEmotion: {value: e}}); setModal(null); }} className={`text-4xl p-2 rounded-xl hover:bg-gray-100 ${data.currentEmotion.value === e ? 'bg-blue-100 ring-2 ring-blue-300' : ''}`}>{e}</button>))}</div>
+                            <p className="text-center text-xs text-gray-400 mt-4">Compre emoções diferentes na Loja!</p>
+                        </Modal>
+                    )}
+                </div>
+            );
+        }
+        const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<ChildDashboard />);
+    </script>
+</body>
+</html>

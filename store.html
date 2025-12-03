@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Loja Mágica - Fin Family</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Fredoka', 'sans-serif'] },
+                    animation: { 
+                        'fade-in-up': 'fadeInUp 0.4s ease-out forwards', 
+                        'bounce-slow': 'bounce 3s infinite',
+                        'pulse-slow': 'pulse 3s infinite',
+                        'wiggle': 'wiggle 0.5s ease-in-out'
+                    },
+                    keyframes: { 
+                        fadeInUp: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        wiggle: {
+                            '0%, 100%': { transform: 'rotate(0deg)' },
+                            '25%': { transform: 'rotate(-5deg)' },
+                            '75%': { transform: 'rotate(5deg)' }
+                        },
+                        popIn: {
+                            '0%': { opacity: '0', transform: 'scale(0.8)' },
+                            '100%': { opacity: '1', transform: 'scale(1)' }
+                        }
+                    },
+                    boxShadow: { 
+                        'soft': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                        'glow': '0 0 15px rgba(167, 139, 250, 0.5)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Fredoka', sans-serif; transition: background 0.5s ease; }
+        .bg-polka { background-image: radial-gradient(rgba(255, 255, 255, 0.3) 2px, transparent 2px); background-size: 24px 24px; }
+        
+        /* Scrollbar escondida para as abas */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Estilo dos Cards */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+            border-radius: 1.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .glass-card:active { transform: scale(0.98); }
+
+        /* Botões com efeito 3D sutil */
+        .btn-premium {
+            transition: all 0.1s;
+            box-shadow: 0 4px 0 0 rgba(0,0,0,0.1);
+        }
+        .btn-premium:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 0 rgba(0,0,0,0.1);
+        }
+        .btn-premium:disabled {
+            opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none;
+        }
+
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 2rem; border-radius: 2rem; width: 90%; max-width: 350px; text-align: center; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 4px solid white; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body class="bg-gradient-to-b from-purple-100 to-blue-100 min-h-screen relative overflow-x-hidden pb-24">
+    
+    <div class="absolute inset-0 bg-polka opacity-50 pointer-events-none fixed"></div>
+
+    <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-white/50 shadow-sm pb-2">
+        <div class="flex justify-between items-center p-4 max-w-6xl mx-auto">
+            <a href="ChildDashboard.html" class="bg-white p-2 rounded-full text-gray-500 hover:text-purple-600 shadow-sm transition-colors border border-gray-100">
+                <i class="fa-solid fa-arrow-left text-xl"></i>
+            </a>
+            
+            <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-500">
+                Loja Mágica ✨
+            </h1>
+
+            <div class="bg-orange-100 text-orange-600 px-4 py-1.5 rounded-full font-bold shadow-sm border border-orange-200 flex items-center gap-2">
+                <span class="text-xl">🪙</span> <span id="user-coins" class="text-lg">...</span>
+            </div>
+        </div>
+
+        <div class="flex overflow-x-auto px-4 gap-3 no-scrollbar max-w-6xl mx-auto pb-2">
+            <button onclick="setTab('themes')" id="tab-themes" class="tab-btn flex-shrink-0 px-5 py-2 rounded-full text-sm font-bold transition-all bg-purple-600 text-white shadow-lg shadow-purple-200">Temas 🎨</button>
+            <button onclick="setTab('icons')" id="tab-icons" class="tab-btn flex-shrink-0 px-5 py-2 rounded-full text-sm font-bold transition-all bg-white text-gray-500 hover:bg-gray-50">Ícones 🖼️</button>
+            <button onclick="setTab('emotions')" id="tab-emotions" class="tab-btn flex-shrink-0 px-5 py-2 rounded-full text-sm font-bold transition-all bg-white text-gray-500 hover:bg-gray-50">Emoções 😊</button>
+            <button onclick="setTab('pets')" id="tab-pets" class="tab-btn flex-shrink-0 px-5 py-2 rounded-full text-sm font-bold transition-all bg-white text-gray-500 hover:bg-gray-50">Mascotes 🐷</button>
+        </div>
+    </header>
+
+    <main id="shop-grid" class="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-6xl mx-auto mt-2 animate-fade-in-up">
+        <div class="col-span-full text-center py-10 text-gray-400">
+            <i class="fa-solid fa-spinner fa-spin text-3xl"></i>
+            <p class="mt-2 font-bold">Carregando loja...</p>
+        </div>
+    </main>
+
+    <div id="shop-modal" class="hidden modal-overlay">
+        <div class="modal-content">
+            <div id="modal-icon" class="text-6xl mb-4 animate-bounce-slow">✨</div>
+            <h3 id="modal-title" class="text-2xl font-extrabold text-gray-800 mb-2">Título</h3>
+            <p id="modal-message" class="text-gray-600 mb-6 font-medium">Mensagem aqui.</p>
+            
+            <div id="modal-tip" class="hidden bg-blue-50 p-3 rounded-xl mb-6 text-xs text-blue-600 border border-blue-100 text-left flex items-start gap-2">
+                <i class="fa-solid fa-lightbulb text-lg mt-0.5 text-yellow-500"></i>
+                <span class="leading-tight">Dica de economia</span>
+            </div>
+
+            <div id="modal-actions" class="flex flex-col gap-3">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        const supabase = window.supabase.createClient("https://jwwgsyibgwpvgfbsltzr.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3d2dzeWliZ3dwdmdmYnNsdHpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNzkzMDAsImV4cCI6MjA3ODk1NTMwMH0.9iA_dKu4UJf-tQV03YdG8J1N4FhuP_flxHr7HWDbt9I");
+        
+        let userData = null;
+        let currentTab = 'themes';
+
+        const ITEMS = {
+            themes: [
+                { id: 'rosa', name: 'Doce Sonho', price: 20, colors: ['#FFC0CB', '#ADD8E6'], type: 'theme' },
+                { id: 'sol', name: 'Dia de Sol', price: 40, colors: ['#FFC72C', '#F97316'], type: 'theme' },
+                { id: 'noite', name: 'Espaço', price: 60, colors: ['#483D8B', '#00008B'], type: 'theme' },
+                { id: 'floresta', name: 'Floresta', price: 50, colors: ['#A7F3D0', '#059669'], type: 'theme' },
+                { id: 'oceano', name: 'Fundo do Mar', price: 55, colors: ['#00BFFF', '#1E90FF'], type: 'theme' },
+                { id: 'vulcao', name: 'Vulcão', price: 80, colors: ['#FF4500', '#8B0000'], type: 'theme' },
+                { id: 'unicornio', name: 'Unicórnio', price: 90, colors: ['#E0B0FF', '#FFB6C1'], type: 'theme' },
+                { id: 'cyber', name: 'Cyberpunk', price: 100, colors: ['#00FF00', '#FF00FF'], type: 'theme' }
+            ],
+            icons: [
+                { id: 'fa-cat', name: 'Gatinho', price: 15, icon: 'fa-cat', type: 'icon' },
+                { id: 'fa-dog', name: 'Cachorro', price: 15, icon: 'fa-dog', type: 'icon' },
+                { id: 'fa-robot', name: 'Robô', price: 25, icon: 'fa-robot', type: 'icon' },
+                { id: 'fa-dragon', name: 'Dragão', price: 40, icon: 'fa-dragon', type: 'icon' },
+                { id: 'fa-ghost', name: 'Fantasma', price: 20, icon: 'fa-ghost', type: 'icon' },
+                { id: 'fa-gamepad', name: 'Gamer', price: 20, icon: 'fa-gamepad', type: 'icon' },
+                { id: 'fa-music', name: 'Músico', price: 18, icon: 'fa-music', type: 'icon' },
+                { id: 'fa-futbol', name: 'Atleta', price: 22, icon: 'fa-futbol', type: 'icon' },
+                { id: 'fa-crown', name: 'Realeza', price: 60, icon: 'fa-crown', type: 'icon' }
+            ],
+            emotions: [
+                { id: '😎', name: 'Legal', price: 10, value: '😎', type: 'emotion' },
+                { id: '🤩', name: 'Estrela', price: 20, value: '🤩', type: 'emotion' },
+                { id: '🤠', name: 'Cowboy', price: 15, value: '🤠', type: 'emotion' },
+                { id: '🥳', name: 'Festa', price: 25, value: '🥳', type: 'emotion' },
+                { id: '🤓', name: 'Sabido', price: 18, value: '🤓', type: 'emotion' },
+                { id: '🥶', name: 'Gelado', price: 12, value: '🥶', type: 'emotion' },
+                { id: '🤯', name: 'Explosão', price: 30, value: '🤯', type: 'emotion' },
+                { id: '🤑', name: 'Rico', price: 50, value: '🤑', type: 'emotion' }
+            ],
+            pets: [
+                { id: '🐱', name: 'Gato', price: 35, value: '🐱', type: 'pet' },
+                { id: '🐶', name: 'Cão', price: 35, value: '🐶', type: 'pet' },
+                { id: '🦊', name: 'Raposa', price: 50, value: '🦊', type: 'pet' },
+                { id: '🦁', name: 'Leão', price: 60, value: '🦁', type: 'pet' },
+                { id: '🦄', name: 'Unicórnio', price: 120, value: '🦄', type: 'pet' },
+                { id: '🦕', name: 'Dino', price: 80, value: '🦕', type: 'pet' },
+                { id: '🐙', name: 'Polvo', price: 55, value: '🐙', type: 'pet' },
+                { id: '👽', name: 'Alien', price: 90, value: '👽', type: 'pet' }
+            ]
+        };
+
+        async function init() {
+            const session = JSON.parse(localStorage.getItem('fin_session'));
+            if (!session) return window.location.href = 'fluxo-login.html';
+            const { data } = await supabase.from('child_profiles').select('data').eq('user_id', session.uid).single();
+            userData = data.data;
+            
+            // Garante estrutura
+            if(!userData.inventory) userData.inventory = { themes: ['padrão'], icons: ['fa-user-astronaut'], emotions: ['😊', '😢', '😠', '😐'], pets: ['🐷'] };
+            if(!userData.inventory.emotions) userData.inventory.emotions = ['😊', '😢', '😠', '😐'];
+
+            document.getElementById('user-coins').innerText = userData.coins;
+            renderItems();
+        }
+
+        function setTab(tab) {
+            currentTab = tab;
+            
+            // Atualiza visual das abas
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('bg-purple-600', 'text-white', 'shadow-lg', 'shadow-purple-200');
+                b.classList.add('bg-white', 'text-gray-500', 'hover:bg-gray-50');
+            });
+            const activeBtn = document.getElementById(`tab-${tab}`);
+            activeBtn.classList.remove('bg-white', 'text-gray-500', 'hover:bg-gray-50');
+            activeBtn.classList.add('bg-purple-600', 'text-white', 'shadow-lg', 'shadow-purple-200');
+
+            renderItems();
+        }
+
+        function renderItems() {
+            const container = document.getElementById('shop-grid');
+            container.innerHTML = '';
+            
+            ITEMS[currentTab].forEach(item => {
+                const isOwned = checkOwned(item);
+                const el = document.createElement('div');
+                el.className = "glass-card p-4 flex flex-col items-center text-center relative overflow-hidden animate-fade-in-up";
+                
+                // Renderização Visual do Item
+                let visual = '';
+                if(item.type === 'theme') {
+                    visual = `<div class="w-full h-20 rounded-xl mb-3 shadow-md transform transition-transform hover:scale-105" style="background: linear-gradient(135deg, ${item.colors[0]}, ${item.colors[1]})"></div>`;
+                } else if(item.type === 'icon') {
+                    visual = `<div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-3 shadow-sm"><i class="fa-solid ${item.icon} text-4xl text-blue-500"></i></div>`;
+                } else {
+                    visual = `<div class="text-6xl mb-3 transform transition-transform hover:scale-110 cursor-default">${item.value}</div>`;
+                }
+
+                el.innerHTML = `
+                    ${visual}
+                    <h3 class="font-bold text-gray-800 text-lg leading-tight mb-1">${item.name}</h3>
+                    
+                    ${isOwned 
+                        ? `<div class="mt-auto w-full pt-2">
+                               <span class="text-green-500 font-extrabold text-xs bg-green-100 px-4 py-2 rounded-full block w-full border border-green-200 shadow-sm">
+                                   <i class="fa-solid fa-check mr-1"></i> SEU
+                               </span>
+                           </div>` 
+                        : `<div class="mt-auto w-full pt-2">
+                               <button onclick="confirmPurchase('${item.id}', '${item.name}', ${item.price}, '${item.type}')" 
+                                   class="btn-premium w-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg text-sm flex items-center justify-center gap-2">
+                                   <span>${item.price}</span> <span class="text-yellow-300">🪙</span>
+                               </button>
+                           </div>`
+                    }
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function checkOwned(item) {
+            if (!userData || !userData.inventory) return false;
+            const inv = userData.inventory;
+            if(item.type === 'theme') return inv.themes && inv.themes.includes(item.id);
+            if(item.type === 'icon') return inv.icons && inv.icons.includes(item.id);
+            if(item.type === 'emotion') return inv.emotions && inv.emotions.includes(item.id);
+            if(item.type === 'pet') return inv.pets && inv.pets.includes(item.id);
+            return false;
+        }
+
+        // --- SISTEMA DE MODAIS PREMIUM ---
+        const modalEl = document.getElementById('shop-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMsg = document.getElementById('modal-message');
+        const modalActions = document.getElementById('modal-actions');
+        const modalIcon = document.getElementById('modal-icon');
+        const modalTip = document.getElementById('modal-tip');
+
+        function showModal(title, msg, icon, buttons, tip = null) {
+            modalTitle.innerText = title;
+            modalMsg.innerText = msg;
+            modalIcon.innerHTML = icon;
+            modalActions.innerHTML = '';
+            
+            if (tip) {
+                modalTip.querySelector('span').innerText = tip;
+                modalTip.classList.remove('hidden');
+            } else {
+                modalTip.classList.add('hidden');
+            }
+            
+            buttons.forEach(btn => {
+                const b = document.createElement('button');
+                b.className = `w-full py-3 rounded-xl font-bold shadow-md transition-all transform active:scale-95 ${btn.class}`;
+                b.innerText = btn.text;
+                b.onclick = () => {
+                    if (btn.action) btn.action();
+                    if (btn.close) closeModal();
+                };
+                modalActions.appendChild(b);
+            });
+            
+            modalEl.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            modalEl.classList.add('hidden');
+        }
+
+        window.confirmPurchase = (itemId, itemName, price, type) => {
+            if(userData.coins < price) {
+                showModal("Faltam Moedas 🪙", `Você precisa de mais ${price - userData.coins} moedas para comprar "${itemName}".`, "😢", [
+                    { text: "Vou jogar para ganhar!", class: "bg-green-500 text-white hover:bg-green-600", close: true }
+                ]);
+                return;
+            }
+
+            // Dicas Financeiras Inteligentes
+            let educationalTip = null;
+            if (price >= 80) educationalTip = "Uau, um item valioso! Tem certeza que é a melhor hora para gastar?";
+            else if (price >= 40) educationalTip = "Lembre-se: cada moeda gasta aqui é uma moeda a menos para o seu sonho (meta)!";
+            else educationalTip = "Uma recompensa pequena é sempre bom!";
+
+            showModal("Comprar Item? 🛍️", `Deseja gastar ${price} moedas em "${itemName}"?`, "🤔", [
+                { text: "Sim, eu quero!", class: "bg-purple-600 text-white hover:bg-purple-700", close: true, action: () => executePurchase(itemId, price, type, itemName) },
+                { text: "Melhor guardar", class: "bg-gray-200 text-gray-600 hover:bg-gray-300", close: true }
+            ], educationalTip);
+        };
+
+        window.executePurchase = async (itemId, price, type, itemName) => {
+            userData.coins -= price;
+            
+            if (!userData.inventory.themes) userData.inventory.themes = ['padrão'];
+            if (!userData.inventory.icons) userData.inventory.icons = ['fa-user-astronaut'];
+            if (!userData.inventory.emotions) userData.inventory.emotions = ['😊', '😢', '😠', '😐'];
+            if (!userData.inventory.pets) userData.inventory.pets = ['🐷'];
+
+            if(type === 'theme') userData.inventory.themes.push(itemId);
+            if(type === 'icon') userData.inventory.icons.push(itemId);
+            if(type === 'emotion') userData.inventory.emotions.push(itemId);
+            if(type === 'pet') userData.inventory.pets.push(itemId);
+
+            userData.transactions.unshift({
+                id: Date.now(), type: 'spend', amount: price, description: `Loja: ${itemName}`, date: new Date().toLocaleDateString()
+            });
+
+            const session = JSON.parse(localStorage.getItem('fin_session'));
+            await supabase.from('child_profiles').update({ data: userData }).eq('user_id', session.uid);
+            
+            document.getElementById('user-coins').innerText = userData.coins;
+            renderItems();
+            
+            showModal("Sucesso! 🎉", `Você comprou "${itemName}"! Use agora em 'Personalizar'.`, "🎁", [
+                { text: "Ir para o meu perfil", class: "bg-blue-500 text-white hover:bg-blue-600", action: () => window.location.href = 'ChildDashboard.html', close: true },
+                { text: "Continuar comprando", class: "bg-gray-200 text-gray-700 hover:bg-gray-300", close: true }
+            ]);
+        };
+
+        init();
+    </script>
+</body>
+</html>

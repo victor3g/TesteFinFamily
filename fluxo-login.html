@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fin Family - Entrar</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Fredoka', 'sans-serif'] },
+                    animation: {
+                        'gradient-xy': 'gradient-xy 15s ease infinite',
+                        'fade-in-up': 'fadeInUp 0.4s ease-out forwards',
+                        'bounce-slow': 'bounce 3s infinite',
+                    },
+                    keyframes: {
+                        'gradient-xy': {
+                            '0%, 100%': { 'background-size': '400% 400%', 'background-position': 'left center' },
+                            '50%': { 'background-size': '200% 200%', 'background-position': 'right center' }
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(10px) scale(0.98)' },
+                            '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+                        }
+                    },
+                    boxShadow: {
+                        'soft-blue': '0 20px 40px -15px rgba(59, 130, 246, 0.3)',
+                        'soft-pink': '0 20px 40px -15px rgba(236, 72, 153, 0.3)',
+                        'card-glow': '0 30px 60px -15px rgba(59, 130, 246, 0.25), 0 0 20px rgba(255,255,255,0.8) inset',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; font-family: 'Fredoka', sans-serif; }
+        .bg-polka {
+            background-image: radial-gradient(rgba(74, 85, 104, 0.15) 1.5px, transparent 1.5px), radial-gradient(rgba(74, 85, 104, 0.15) 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
+            background-position: 0 0, 12px 12px;
+        }
+        input::-ms-reveal, input::-ms-clear { display: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const supabase = window.supabase.createClient("https://jwwgsyibgwpvgfbsltzr.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3d2dzeWliZ3dwdmdmYnNsdHpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNzkzMDAsImV4cCI6MjA3ODk1NTMwMH0.9iA_dKu4UJf-tQV03YdG8J1N4FhuP_flxHr7HWDbt9I");
+
+        // --- Componentes Visuais ---
+        
+        const Modal = ({ title, message, type = 'info', onClose, buttonText = "OK" }) => {
+            const icon = type === 'success' ? 'fa-check-circle text-green-500' : type === 'error' ? 'fa-exclamation-circle text-red-500' : 'fa-info-circle text-blue-500';
+            const btnColor = type === 'success' ? 'bg-green-500 hover:bg-green-600' : type === 'error' ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600';
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in-up">
+                    <div className="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl relative border-4 border-white text-center">
+                        <div className="mb-4 text-5xl">
+                            <i className={`fa-solid ${icon}`}></i>
+                        </div>
+                        <h3 className="text-2xl font-bold text-gray-800 mb-2">{title}</h3>
+                        <p className="text-gray-600 mb-6 font-medium">{message}</p>
+                        <button onClick={onClose} className={`w-full text-white py-3 rounded-xl font-bold shadow-lg transition-colors ${btnColor}`}>
+                            {buttonText}
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const InputField = ({ type="text", placeholder, value, onChange, themeColor="blue", centered=false, icon, onIconClick }) => (
+            <div className="relative w-full">
+                <input 
+                    type={type} placeholder={placeholder} value={value} onChange={onChange} 
+                    className={`w-full ${centered ? 'px-6 text-center tracking-widest' : 'px-6'} py-4 rounded-3xl bg-slate-50 border-4 border-transparent focus:bg-white shadow-sm text-slate-600 placeholder-slate-400 focus:outline-none focus:ring-4 transition-all font-medium text-lg ${themeColor === 'blue' ? 'focus:border-blue-200/50 focus:ring-blue-100' : themeColor === 'pink' ? 'focus:border-pink-200/50 focus:ring-pink-100' : 'focus:border-green-200/50 focus:ring-green-100'}`}
+                />
+                {icon && <button type="button" onClick={onIconClick} className="absolute right-6 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">{icon}</button>}
+            </div>
+        );
+
+        const PrimaryButton = ({ children, onClick, color="blue", disabled }) => {
+            const colors = {
+                blue: 'from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 shadow-blue-300/60',
+                pink: 'from-pink-400 to-pink-500 hover:from-pink-500 hover:to-pink-600 shadow-pink-300/60',
+                green: 'from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 shadow-green-300/60',
+                purple: 'from-purple-400 to-purple-500 hover:from-purple-500 hover:to-purple-600 shadow-purple-300/60',
+            };
+            return (
+                <button onClick={onClick} disabled={disabled} className={`w-full text-white font-bold text-xl py-4 rounded-full shadow-lg transform active:scale-95 transition-all duration-300 hover:-translate-y-1 bg-gradient-to-r ${colors[color]} ${disabled ? 'opacity-70 cursor-not-allowed' : ''}`}>{children}</button>
+            );
+        };
+
+        // --- APP ---
+        function App() {
+            const [view, setView] = useState('login'); 
+            const [userType, setUserType] = useState('parent');
+            const [loading, setLoading] = useState(false);
+            const [message, setMessage] = useState({text: '', type: ''});
+            const [showHelp, setShowHelp] = useState(false);
+            const [modal, setModal] = useState(null); 
+
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [confirmPassword, setConfirmPassword] = useState('');
+            const [name, setName] = useState('');
+            const [accessCode, setAccessCode] = useState('');
+            const [showPassword, setShowPassword] = useState(false);
+
+            useEffect(() => {
+                const session = localStorage.getItem('fin_session');
+                if (session) {
+                    const data = JSON.parse(session);
+                    if (data.role === 'parent') window.location.href = 'ParentDashboard.html';
+                    if (data.role === 'child') window.location.href = 'ChildDashboard.html';
+                }
+
+                // --- 1. VERIFICAÇÃO MANUAL DO HASH (CRÍTICO) ---
+                // Verifica se a URL tem "type=recovery" assim que carrega
+                const hash = window.location.hash;
+                if (hash && hash.includes('type=recovery')) {
+                    setView("reset_password"); // Força a tela de reset
+                    
+                    // Opcional: Feedback imediato
+                    // setModal({ title: "Recuperação", message: "Defina sua nova senha.", type: "info", onClose: () => setModal(null) });
+                }
+
+                // 2. Detecção de Erros (Link Expirado)
+                if (hash && hash.includes('error=')) {
+                    const params = new URLSearchParams(hash.substring(1));
+                    const errorDescription = params.get('error_description')?.replace(/\+/g, ' ');
+                    
+                    setModal({
+                        title: "Link Inválido ⚠️",
+                        message: errorDescription || "O link de recuperação expirou. Por favor, solicite um novo.",
+                        type: "error",
+                        action: () => { setView('forgot'); window.location.hash = ''; }
+                    });
+                }
+
+                // 3. Ouvinte de Eventos do Supabase
+                const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+                    if (event === "PASSWORD_RECOVERY") {
+                        setView("reset_password");
+                    }
+                });
+
+                return () => {
+                    if (authListener && authListener.subscription) {
+                        authListener.subscription.unsubscribe();
+                    }
+                };
+            }, []);
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setLoading(true); setMessage({text:'', type:''});
+
+                if (userType === 'parent') {
+                    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                    if (error) { 
+                        setMessage({text: 'Erro: Credenciais inválidas.', type: 'error'}); 
+                        setLoading(false); 
+                        return; 
+                    }
+                    localStorage.setItem('fin_session', JSON.stringify({ role: 'parent', uid: data.user.id }));
+                    window.location.href = 'ParentDashboard.html';
+                } else {
+                    const { data } = await supabase.from('parent_control').select('user_id, data').contains('data', { children: [{ code: accessCode }] });
+                    if (data && data.length > 0) {
+                        const parentRecord = data.find(p => p.data.children.some(c => c.code === accessCode));
+                        if (parentRecord) {
+                            const child = parentRecord.data.children.find(c => c.code === accessCode);
+                            localStorage.setItem('fin_session', JSON.stringify({ role: 'child', uid: child.uid, parentId: parentRecord.user_id }));
+                            window.location.href = 'ChildDashboard.html';
+                            return;
+                        }
+                    }
+                    setMessage({text: 'Código inválido. Peça ao seu responsável.', type: 'error'}); setLoading(false);
+                }
+            };
+
+            const handleRegister = async (e) => {
+                e.preventDefault();
+                if (password !== confirmPassword) { setMessage({text: 'Senhas não coincidem.', type: 'error'}); return; }
+                setLoading(true);
+                const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
+                if (error) {
+                    setMessage({text: error.message, type: 'error'});
+                } else {
+                    await supabase.from('parent_control').insert([{ user_id: data.user.id, data: { name: name || "Responsável", children: [] } }]);
+                    setModal({
+                        title: "Conta Criada! 🎉",
+                        message: "Seu cadastro foi realizado. Verifique seu e-mail para confirmar a conta antes de entrar.",
+                        type: "success",
+                        action: () => setView('login')
+                    });
+                }
+                setLoading(false);
+            };
+
+            const handleForgotPassword = async (e) => {
+                e.preventDefault();
+                setLoading(true); setMessage({text: '', type: ''});
+                
+                // CRÍTICO: Monta a URL limpa para redirecionamento
+                const cleanRedirectUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
+
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: cleanRedirectUrl, 
+                });
+
+                if (error) {
+                    setMessage({text: 'Erro: ' + error.message, type: 'error'});
+                } else {
+                    setModal({
+                        title: "E-mail Enviado! 📧",
+                        message: "Verifique sua caixa de entrada (e spam). Enviamos um link mágico para você redefinir sua senha.",
+                        type: "success",
+                        action: () => setView('login')
+                    });
+                }
+                setLoading(false);
+            };
+
+            const handleUpdatePassword = async (e) => {
+                e.preventDefault();
+                if (password !== confirmPassword) { setMessage({text: 'As senhas não coincidem.', type: 'error'}); return; }
+                if (password.length < 6) { setMessage({text: 'A senha deve ter no mínimo 6 caracteres.', type: 'error'}); return; }
+                
+                setLoading(true);
+                
+                const { error } = await supabase.auth.updateUser({ password: password });
+
+                if (error) {
+                    setMessage({text: 'Erro ao atualizar: ' + error.message, type: 'error'});
+                } else {
+                    setModal({
+                        title: "Senha Atualizada! 🔒",
+                        message: "Sua senha foi alterada com sucesso. Você já pode fazer login com a nova senha.",
+                        type: "success",
+                        action: () => {
+                            setView('login');
+                            window.location.hash = ''; 
+                        }
+                    });
+                }
+                setLoading(false);
+            };
+
+            const closeModal = () => {
+                if (modal && modal.action) modal.action();
+                setModal(null);
+            };
+
+            const getLeftPanelContent = () => {
+                if(view === 'register') return { title: 'Junte-se a nós!', subtitle: 'Crie sua conta familiar.', emoji: '🌱', colorBg: 'bg-green-50/80' };
+                if(view === 'forgot') return { title: 'Recuperar Acesso', subtitle: 'Vamos te ajudar a voltar!', emoji: '🔑', colorBg: 'bg-purple-50/80' };
+                if(view === 'reset_password') return { title: 'Nova Senha', subtitle: 'Escolha uma senha segura.', emoji: '🔒', colorBg: 'bg-purple-50/80' };
+                return userType === 'parent' 
+                    ? { title: 'Área dos Pais', subtitle: 'Gerencie mesadas, tarefas e metas.', emoji: '👨‍👩‍👧‍👦', colorBg: 'bg-blue-50/80' }
+                    : { title: 'Área das Crianças', subtitle: 'Entre com seu código para jogar e poupar!', emoji: '🚀', colorBg: 'bg-pink-50/80' };
+            };
+            const leftContent = getLeftPanelContent();
+            
+            let bgGradient = 'from-blue-100 via-teal-50 to-indigo-100';
+            if (view === 'register') bgGradient = 'from-green-100 via-emerald-50 to-teal-100';
+            if (view === 'forgot' || view === 'reset_password') bgGradient = 'from-purple-100 via-violet-50 to-fuchsia-100';
+
+            return (
+                <div className={`min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br ${bgGradient} transition-colors duration-700`}>
+                    <div className="absolute inset-0 z-0 opacity-40 bg-polka animate-gradient-xy"></div>
+                    
+                    {modal && <Modal title={modal.title} message={modal.message} type={modal.type} onClose={closeModal} />}
+
+                    <button onClick={() => setShowHelp(!showHelp)} className="fixed top-4 right-4 z-50 bg-white/80 p-3 rounded-full shadow-lg text-blue-500 hover:scale-110 transition-transform">
+                        <i className="fa-solid fa-question text-xl"></i>
+                    </button>
+
+                    {showHelp && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in-up" onClick={() => setShowHelp(false)}>
+                            <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl relative" onClick={e => e.stopPropagation()}>
+                                <h3 className="text-2xl font-bold text-slate-800 mb-4 text-center">Como Funciona?</h3>
+                                <div className="space-y-4 text-slate-600">
+                                    <div className="flex items-start gap-3">
+                                        <div className="bg-blue-100 p-2 rounded-lg text-blue-500"><i className="fa-solid fa-user-tie"></i></div>
+                                        <div><p class="font-bold">Adulto</p><p class="text-sm">Cria a conta da família, adiciona as crianças e gerencia o "Banco". Você define as tarefas e metas.</p></div>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <div className="bg-pink-100 p-2 rounded-lg text-pink-500"><i className="fa-solid fa-child-reaching"></i></div>
+                                        <div><p class="font-bold">Criança</p><p class="text-sm">Usa um código de 4 dígitos (gerado pelo adulto) para entrar, ver tarefas, jogar e acompanhar suas economias.</p></div>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowHelp(false)} className="mt-6 w-full bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200">Entendi!</button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className={`relative z-10 bg-white/90 backdrop-blur-md rounded-[3rem] shadow-card-glow w-full max-w-[22rem] md:max-w-5xl flex flex-col md:flex-row transition-all duration-700 ease-in-out border-4 border-white min-h-[600px] ${userType === 'child' ? 'shadow-soft-pink' : 'shadow-soft-blue'}`}>
+                        
+                        <div className={`hidden md:flex w-1/2 flex-col items-center justify-center p-12 text-center relative overflow-hidden rounded-l-[2.7rem] transition-colors duration-700 ${leftContent.colorBg}`}>
+                            <div className="absolute top-10 left-10 text-4xl animate-float opacity-50">☁️</div>
+                            <div className="absolute bottom-10 right-10 text-4xl animate-float opacity-50" style={{animationDelay: '1s'}}>🪙</div>
+                            <div className="relative z-10 animate-fade-in-up">
+                                <h2 className="text-4xl font-bold text-slate-700 mb-4 tracking-tight">{leftContent.title}</h2>
+                                <p className="text-xl text-slate-500 max-w-xs mx-auto mb-8 font-medium leading-relaxed">{leftContent.subtitle}</p>
+                                <div className="text-[8rem] leading-none drop-shadow-xl animate-bounce-slow transform hover:scale-110 transition-transform cursor-pointer">{leftContent.emoji}</div>
+                            </div>
+                        </div>
+
+                        <div className="w-full md:w-1/2 p-8 pt-10 md:p-12 flex flex-col items-center relative justify-center">
+                            <div className="text-center mb-6">
+                                <h1 className="text-3xl md:text-4xl font-bold text-slate-700 tracking-tight">Fin Family</h1>
+                                <div className="text-6xl my-2 drop-shadow-md animate-bounce-slow md:hidden">🐷</div>
+                            </div>
+
+                            {view === 'login' && (
+                                <div className="animate-fade-in-up w-full">
+                                    <div className="flex justify-center mb-8">
+                                        <div className="flex items-center gap-2 bg-slate-100 p-2 rounded-full shadow-inner border-2 border-slate-50 w-full max-w-[280px] justify-between">
+                                            <span className={`text-sm md:text-base font-bold px-4 py-1.5 rounded-full cursor-pointer transition-colors duration-300 ${userType === 'child' ? 'text-pink-500 bg-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} onClick={() => {setUserType('child'); setMessage({text:'', type:''})}}>Criança</span>
+                                            
+                                            <button onClick={() => {setUserType(prev => prev === 'parent' ? 'child' : 'parent'); setMessage({text:'', type:''})}} className={`relative w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-500 focus:outline-none shrink-0 ${userType === 'parent' ? 'bg-blue-400' : 'bg-pink-400'}`}>
+                                                <div className={`bg-white w-6 h-6 rounded-full shadow-sm transform transition-transform duration-500 cubic-bezier(0.4, 0.0, 0.2, 1) ${userType === 'parent' ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                            </button>
+                                            
+                                            <span className={`text-sm md:text-base font-bold px-4 py-1.5 rounded-full cursor-pointer transition-colors duration-300 ${userType === 'parent' ? 'text-blue-500 bg-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} onClick={() => {setUserType('parent'); setMessage({text:'', type:''})}}>Adulto</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-4 text-center">
+                                        <p className="text-sm text-slate-500 font-medium">
+                                            {userType === 'parent' ? 'Acesso para Gerenciar a Família' : 'Acesso com Código de 4 Dígitos'}
+                                        </p>
+                                    </div>
+
+                                    <form className="space-y-5" onSubmit={handleLogin}>
+                                        {userType === 'parent' ? (
+                                            <>
+                                                <InputField themeColor="blue" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} icon={<i className="fa-solid fa-envelope"></i>} />
+                                                <InputField themeColor="blue" type={showPassword ? "text" : "password"} placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} icon={showPassword ? <i className="fa-solid fa-eye-slash"></i> : <i className="fa-solid fa-eye"></i>} onIconClick={() => setShowPassword(!showPassword)} />
+                                            </>
+                                        ) : (
+                                            <div className="mb-2">
+                                                <InputField themeColor="pink" type="text" placeholder="Código (Ex: 1234)" value={accessCode} onChange={e => setAccessCode(e.target.value)} centered={true} />
+                                                <p className="text-center font-medium text-sm text-pink-400 mt-3">Peça o código ao adulto responsável.</p>
+                                            </div>
+                                        )}
+                                        
+                                        {message.text && <p className={`text-center font-bold p-2 rounded-lg text-sm ${message.type === 'error' ? 'bg-red-100 text-red-500' : 'bg-green-100 text-green-600'}`}>{message.text}</p>}
+                                        
+                                        <div className="space-y-3 pt-2">
+                                            <PrimaryButton color={userType === 'parent' ? 'blue' : 'pink'} type="submit" disabled={loading}>{loading ? 'Entrando...' : 'Entrar'}</PrimaryButton>
+                                            
+                                            {userType === 'parent' && (
+                                                <button type="button" onClick={() => { setView('register'); setMessage({text:'', type:''}); }} className="w-full bg-green-100 hover:bg-green-200 text-green-700 font-bold text-lg py-4 rounded-full shadow-lg shadow-green-100/60 transform active:scale-95 transition-all duration-200 border-2 border-green-200 hover:-translate-y-0.5">
+                                                    Criar conta
+                                                </button>
+                                            )}
+                                        </div>
+                                    </form>
+                                    
+                                    {userType === 'parent' && (
+                                        <div className="mt-6 text-center">
+                                            <button onClick={() => { setView('forgot'); setMessage({text:'', type:''}); }} className="text-xs font-semibold text-slate-400 hover:text-blue-500 transition-colors">Esqueceu a senha?</button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {view === 'register' && (
+                                <div className="animate-fade-in-up w-full">
+                                    <h2 className="text-2xl font-bold text-slate-700 mb-6 text-center">Nova Conta</h2>
+                                    <form className="space-y-4" onSubmit={handleRegister}>
+                                        <InputField themeColor="green" placeholder="Nome do Responsável" value={name} onChange={e => setName(e.target.value)} />
+                                        <InputField themeColor="green" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} />
+                                        <InputField themeColor="green" type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} />
+                                        <InputField themeColor="green" type="password" placeholder="Confirmar Senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+                                        
+                                        {message.text && <p className={`text-center font-bold p-2 rounded-lg text-sm ${message.type === 'error' ? 'bg-red-100 text-red-500' : 'bg-green-100 text-green-600'}`}>{message.text}</p>}
+
+                                        <PrimaryButton color="green" type="submit" disabled={loading}>{loading ? 'Criando...' : 'Cadastrar'}</PrimaryButton>
+                                    </form>
+                                    <button onClick={() => { setView('login'); setMessage({text:'', type:''}); }} className="block w-full text-center mt-6 text-slate-400 hover:text-slate-600 font-bold"><i className="fa-solid fa-arrow-left mr-2"></i> Voltar</button>
+                                </div>
+                            )}
+
+                            {view === 'forgot' && (
+                                <div className="animate-fade-in-up w-full">
+                                    <h2 className="text-2xl font-bold text-slate-700 mb-2 text-center">Recuperar Senha</h2>
+                                    <p className="text-center text-slate-500 mb-6 text-sm">Digite seu e-mail para receber o link.</p>
+                                    
+                                    <form className="space-y-4" onSubmit={handleForgotPassword}>
+                                        <InputField themeColor="purple" placeholder="Seu E-mail" value={email} onChange={e => setEmail(e.target.value)} icon={<i className="fa-solid fa-envelope"></i>} />
+                                        
+                                        {message.text && <p className={`text-center font-bold p-2 rounded-lg text-sm ${message.type === 'error' ? 'bg-red-100 text-red-500' : 'bg-green-100 text-green-600'}`}>{message.text}</p>}
+
+                                        <PrimaryButton color="purple" type="submit" disabled={loading}>{loading ? 'Enviando...' : 'Enviar Link'}</PrimaryButton>
+                                    </form>
+                                    <button onClick={() => { setView('login'); setMessage({text:'', type:''}); }} className="block w-full text-center mt-6 text-slate-400 hover:text-slate-600 font-bold"><i className="fa-solid fa-arrow-left mr-2"></i> Voltar</button>
+                                </div>
+                            )}
+
+                            {view === 'reset_password' && (
+                                <div className="animate-fade-in-up w-full">
+                                    <h2 className="text-2xl font-bold text-slate-700 mb-2 text-center">Nova Senha</h2>
+                                    <p className="text-center text-slate-500 mb-6 text-sm">Digite sua nova senha abaixo.</p>
+                                    
+                                    <form className="space-y-4" onSubmit={handleUpdatePassword}>
+                                        <InputField themeColor="purple" type="password" placeholder="Nova Senha" value={password} onChange={e => setPassword(e.target.value)} />
+                                        <InputField themeColor="purple" type="password" placeholder="Confirmar Senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+                                        
+                                        {message.text && <p className={`text-center font-bold p-2 rounded-lg text-sm ${message.type === 'error' ? 'bg-red-100 text-red-500' : 'bg-green-100 text-green-600'}`}>{message.text}</p>}
+
+                                        <PrimaryButton color="purple" type="submit" disabled={loading}>{loading ? 'Salvando...' : 'Redefinir Senha'}</PrimaryButton>
+                                    </form>
+                                </div>
+                            )}
+
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
